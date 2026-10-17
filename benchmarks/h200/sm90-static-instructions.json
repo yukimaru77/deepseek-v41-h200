@@ -1,0 +1,34 @@
+{
+  "scope": "static instructions in the selected sm90 CB2 gate/up kernel, not runtime instruction counts",
+  "counts": {
+    "expert-gateup-original.sass": {
+      "LDGSTS.E.BYPASS.128": 51,
+      "HMMA.16816.F32": 144,
+      "FADD": 446,
+      "FMUL": 39,
+      "FFMA.SAT": 8,
+      "FFMA.RM": 9,
+      "FFMA": 75,
+      "FADD.FTZ": 2,
+      "FFMA.RZ": 1,
+      "FFMA.RP": 1
+    },
+    "expert-gateup-fixed.sass": {
+      "LDGSTS.E.BYPASS.128": 51,
+      "HMMA.16816.F32": 144,
+      "FADD": 448,
+      "FMUL": 40,
+      "FFMA.SAT": 8,
+      "FFMA.RM": 9,
+      "FFMA": 73,
+      "FADD.FTZ": 2,
+      "FFMA.RZ": 1,
+      "FFMA.RP": 1
+    }
+  },
+  "original_disassembly_sha256": {
+    "expert-gateup-original.sass": "d845fb15d151764c9512b98683bb264db5a73a5fcedda98746a340659573c814",
+    "expert-gateup-fixed.sass": "e40644053690c440b9122b73da057b4d4eadfb27925b685e38b03649d9fb7ed0"
+  },
+  "scope_note": "Historical H200 rounding-fix experiment, pre-1017. Counts describe static code in one selected kernel, not executed instruction counts, total model FLOPs, or a speedup percentage."
+}

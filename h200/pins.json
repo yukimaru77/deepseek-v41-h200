@@ -1,0 +1,27 @@
+{
+  "tensorfold": {
+    "repository": "https://github.com/bertholomus/TensorFold",
+    "revision": "8e0966e2b09250abe2f6d9cc51edc20630e6eb1a"
+  },
+  "container_image": "lmsysorg/sglang@sha256:16aba8925507e631e1dc1e23d95d026533602591775f6a8db68b74ee99746155",
+  "models": [
+    {
+      "name": "EXL3 checkpoint",
+      "repo_id": "LibertAIDAI/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw",
+      "revision": "afc7aa0aab98ee735c0f54e0a122019af1ac08f1",
+      "directory": "exl3-1017-2.9bpw",
+      "allow_patterns": ["*.json", "*.safetensors", "*.txt", "*.jinja", "README.md", "LICENSE"],
+      "expected_safetensors_files": 43,
+      "tensor_bytes": 210742161222
+    },
+    {
+      "name": "Original Engram tables",
+      "repo_id": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "revision": "1bae0e1088993b9b82de08f59de5be5a34e42170",
+      "directory": "Engram-1017",
+      "allow_patterns": ["model-00047-of-00048.safetensors", "model-00048-of-00048.safetensors", "*.json", "*.txt", "*.jinja", "README.md", "LICENSE"],
+      "expected_safetensors_files": 2,
+      "tensor_bytes": 203073077576
+    }
+  ]
+}

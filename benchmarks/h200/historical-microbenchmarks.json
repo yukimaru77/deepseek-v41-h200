@@ -1,0 +1,882 @@
+{
+  "schema_version": 1,
+  "campaign_date_utc": "2026-10-17",
+  "scope": "Historical H200 component experiments; model-dependent tests used pre-1017 DeepSeek-V4.1-Flash EXL3 2.9bpw weights. Do not present as 1017 full-model TPS.",
+  "hardware": {
+    "gpu": "NVIDIA H200 NVL",
+    "gpu_count": 2
+  },
+  "expert_rounding_dispatch": {
+    "source": "experiments/02-expert-numerics/expert-rounding-v1.json",
+    "method_source": "experiments/02-expert-numerics/tools/dsv41/expert_decode_bench.py",
+    "review_source": "experiments/02-expert-numerics/NUMERICS.md",
+    "layer": 10,
+    "tp_rank": 0,
+    "cold_l2_before_graph_replay": true,
+    "note": "Explicit rounded activation-scale multiply prevents FMA contraction; R1 cp and R6 fused dispatch. Table retains both mean and median fields as recorded.",
+    "rows": [
+      {
+        "picks": "clustered",
+        "R": 1,
+        "experts": 6,
+        "MB": 50.9,
+        "old_ms": 0.0983,
+        "old_med_ms": 0.0981,
+        "old_GBps": 517.5,
+        "cp_ms": 0.0834,
+        "cp_med_ms": 0.0834,
+        "cp_GBps": 610,
+        "cp_bit_equal_old": true,
+        "fused_ms": 0.1017,
+        "fused_med_ms": 0.1018,
+        "fused_GBps": 500.1,
+        "fused_bit_equal_old": true,
+        "saving_ms": -0.0034,
+        "saving_pct": -3.5
+      },
+      {
+        "picks": "clustered",
+        "R": 6,
+        "experts": 12,
+        "MB": 90.7,
+        "old_ms": 0.1613,
+        "old_med_ms": 0.1623,
+        "old_GBps": 562.3,
+        "cp_ms": 0.1348,
+        "cp_med_ms": 0.1358,
+        "cp_GBps": 672.7,
+        "cp_bit_equal_old": true,
+        "fused_ms": 0.1237,
+        "fused_med_ms": 0.1239,
+        "fused_GBps": 733.3,
+        "fused_bit_equal_old": true,
+        "saving_ms": 0.0376,
+        "saving_pct": 23.3
+      },
+      {
+        "picks": "random",
+        "R": 1,
+        "experts": 6,
+        "MB": 50.9,
+        "old_ms": 0.1003,
+        "old_med_ms": 0.1003,
+        "old_GBps": 507,
+        "cp_ms": 0.0852,
+        "cp_med_ms": 0.0851,
+        "cp_GBps": 597.3,
+        "cp_bit_equal_old": true,
+        "fused_ms": 0.1015,
+        "fused_med_ms": 0.1016,
+        "fused_GBps": 501.3,
+        "fused_bit_equal_old": true,
+        "saving_ms": -0.0012,
+        "saving_pct": -1.2
+      },
+      {
+        "picks": "random",
+        "R": 6,
+        "experts": 33.5,
+        "MB": 233.3,
+        "old_ms": 0.3218,
+        "old_med_ms": 0.3246,
+        "old_GBps": 725,
+        "cp_ms": 0.2782,
+        "cp_med_ms": 0.281,
+        "cp_GBps": 838.8,
+        "cp_bit_equal_old": true,
+        "fused_ms": 0.2582,
+        "fused_med_ms": 0.2598,
+        "fused_GBps": 903.9,
+        "fused_bit_equal_old": true,
+        "saving_ms": 0.0636,
+        "saving_pct": 19.8
+      }
+    ],
+    "invariance": {
+      "old": {
+        "windows": 10,
+        "rows_checked": 65,
+        "rows_differing": 0
+      },
+      "cp": {
+        "windows": 10,
+        "rows_checked": 65,
+        "rows_differing": 0,
+        "solo_bit_equal_old": true
+      },
+      "fused": {
+        "windows": 10,
+        "rows_checked": 65,
+        "rows_differing": 0,
+        "solo_bit_equal_old": true
+      }
+    }
+  },
+  "nccl_all_gather": {
+    "source": "experiments/06-expert-tuning/comm-comparison.json",
+    "method_source": "experiments/06-expert-tuning/h200_comm_bench.py",
+    "model_weights_used": false,
+    "rank_count": 2,
+    "dtype": "float32",
+    "warmup_calls": 10,
+    "calls_per_cuda_graph": 50,
+    "timed_graph_replays": 7,
+    "metric": "Median CUDA-event elapsed time per all_gather over 7 graph replays",
+    "variants": {
+      "forced_simple_min4": [
+        {
+          "send_bytes": 20480,
+          "median_us": 23.27615976333618,
+          "samples_us": [
+            23.83296012878418,
+            23.301119804382324,
+            23.152639865875244,
+            23.27615976333618,
+            23.296000957489014,
+            23.2588791847229,
+            23.258240222930908
+          ]
+        },
+        {
+          "send_bytes": 122880,
+          "median_us": 25.282559394836426,
+          "samples_us": [
+            25.648000240325928,
+            25.260798931121826,
+            25.267200469970703,
+            25.280001163482666,
+            25.31264066696167,
+            25.282559394836426,
+            25.287039279937744
+          ]
+        },
+        {
+          "send_bytes": 1551360,
+          "median_us": 67.64607906341553,
+          "samples_us": [
+            68.00640106201172,
+            67.80223846435547,
+            67.58848190307617,
+            67.59359836578369,
+            67.67360210418701,
+            67.64607906341553,
+            67.56415843963623
+          ]
+        },
+        {
+          "send_bytes": 10485760,
+          "median_us": 343.6249542236328,
+          "samples_us": [
+            343.5987091064453,
+            344.1049575805664,
+            343.6249542236328,
+            343.47007751464844,
+            343.5795211791992,
+            343.70494842529297,
+            343.98719787597656
+          ]
+        }
+      ],
+      "automatic": [
+        {
+          "send_bytes": 20480,
+          "median_us": 12.570879459381104,
+          "samples_us": [
+            13.385599851608276,
+            12.296960353851318,
+            12.579840421676636,
+            12.570879459381104,
+            12.532479763031006,
+            12.5273597240448,
+            12.584960460662842
+          ]
+        },
+        {
+          "send_bytes": 122880,
+          "median_us": 18.67519974708557,
+          "samples_us": [
+            18.263039588928223,
+            18.4934401512146,
+            18.68607997894287,
+            18.668160438537598,
+            18.684799671173096,
+            18.693759441375732,
+            18.67519974708557
+          ]
+        },
+        {
+          "send_bytes": 1551360,
+          "median_us": 68.2150411605835,
+          "samples_us": [
+            68.43135833740234,
+            68.15423965454102,
+            68.40832233428955,
+            68.2150411605835,
+            68.35455894470215,
+            68.21119785308838,
+            68.15231800079346
+          ]
+        },
+        {
+          "send_bytes": 10485760,
+          "median_us": 343.85982513427734,
+          "samples_us": [
+            345.1116943359375,
+            343.9276885986328,
+            343.6819076538086,
+            343.81568908691406,
+            343.9424133300781,
+            343.85982513427734,
+            343.78753662109375
+          ]
+        }
+      ]
+    },
+    "forced_environment": {
+      "NCCL_PROTO": "Simple",
+      "NCCL_MIN_NCHANNELS": "4"
+    },
+    "auto_environment": "NCCL_PROTO, NCCL_MIN_NCHANNELS, NCCL_MAX_NCHANNELS unset; other launcher settings inherited"
+  },
+  "engram_io": {
+    "scope": "CPU gather of both actual Engram layers, TP2 rank-0 12 columns",
+    "original_engram_revision": "314113f8a7dadb388215396ba5fbee2c610a04d6",
+    "file_bytes": 203073077576,
+    "samples_per_shape_and_mode": 80,
+    "pattern": "fresh_rows",
+    "rows": [
+      {
+        "mode": "mmap-resident",
+        "source": "experiments/03-engram-ram/results/mmap-resident.json",
+        "results": [
+          {
+            "rows": 1,
+            "pattern": "fresh_rows",
+            "first_access_us": 31.63982182741165,
+            "samples": 80,
+            "both_layers": {
+              "p50_us": 4.385015927255154,
+              "mean_us": 4.372285911813378,
+              "p90_us": 4.581012763082981,
+              "p99_us": 4.766297060996294
+            },
+            "bytes_equal_pread": true
+          },
+          {
+            "rows": 6,
+            "pattern": "fresh_rows",
+            "first_access_us": 17.01992005109787,
+            "samples": 80,
+            "both_layers": {
+              "p50_us": 13.105105608701706,
+              "mean_us": 13.362112804315984,
+              "p90_us": 13.828743249177933,
+              "p99_us": 18.386850133538154
+            },
+            "bytes_equal_pread": true
+          },
+          {
+            "rows": 512,
+            "pattern": "fresh_rows",
+            "first_access_us": 868.5968350619078,
+            "samples": 80,
+            "both_layers": {
+              "p50_us": 1236.8300231173635,
+              "mean_us": 1232.2492169914767,
+              "p90_us": 1278.006937354803,
+              "p99_us": 1334.8303688690057
+            },
+            "bytes_equal_pread": true
+          }
+        ]
+      },
+      {
+        "mode": "pread-1",
+        "source": "experiments/03-engram-ram/results/pread-1.json",
+        "results": [
+          {
+            "rows": 1,
+            "pattern": "fresh_rows",
+            "first_access_us": 235.62205024063587,
+            "samples": 80,
+            "both_layers": {
+              "p50_us": 27.515110559761524,
+              "mean_us": 27.772472822107375,
+              "p90_us": 30.511757358908653,
+              "p99_us": 34.32399826124309
+            },
+            "bytes_equal_pread": true
+          },
+          {
+            "rows": 6,
+            "pattern": "fresh_rows",
+            "first_access_us": 141.3309946656227,
+            "samples": 80,
+            "both_layers": {
+              "p50_us": 261.3969845697284,
+              "mean_us": 202.91472901590168,
+              "p90_us": 276.0479226708412,
+              "p99_us": 283.0809960141778
+            },
+            "bytes_equal_pread": true
+          },
+          {
+            "rows": 512,
+            "pattern": "fresh_rows",
+            "first_access_us": 21652.9609169811,
+            "samples": 80,
+            "both_layers": {
+              "p50_us": 19447.82305508852,
+              "mean_us": 19665.055759833194,
+              "p90_us": 20366.218010894954,
+              "p99_us": 22504.236898384985
+            },
+            "bytes_equal_pread": true
+          }
+        ]
+      },
+      {
+        "mode": "pread-8",
+        "source": "experiments/03-engram-ram/results/pread-8.json",
+        "results": [
+          {
+            "rows": 1,
+            "pattern": "fresh_rows",
+            "first_access_us": 493.53414215147495,
+            "samples": 80,
+            "both_layers": {
+              "p50_us": 37.32589539140463,
+              "mean_us": 37.68780443351716,
+              "p90_us": 43.50894596427679,
+              "p99_us": 50.24250131100416
+            },
+            "bytes_equal_pread": true
+          },
+          {
+            "rows": 6,
+            "pattern": "fresh_rows",
+            "first_access_us": 118.84118430316448,
+            "samples": 80,
+            "both_layers": {
+              "p50_us": 96.40550706535578,
+              "mean_us": 96.36600152589381,
+              "p90_us": 101.69409215450287,
+              "p99_us": 104.71096262335777
+            },
+            "bytes_equal_pread": true
+          },
+          {
+            "rows": 512,
+            "pattern": "fresh_rows",
+            "first_access_us": 6305.0000462681055,
+            "samples": 80,
+            "both_layers": {
+              "p50_us": 9715.601452626288,
+              "mean_us": 8709.087574970908,
+              "p90_us": 9914.63027894497,
+              "p99_us": 10395.178664475667
+            },
+            "bytes_equal_pread": true
+          }
+        ]
+      },
+      {
+        "mode": "pread-128",
+        "source": "experiments/03-engram-ram/results/pread-128.json",
+        "results": [
+          {
+            "rows": 1,
+            "pattern": "fresh_rows",
+            "first_access_us": 5735.305137932301,
+            "samples": 80,
+            "both_layers": {
+              "p50_us": 309.017370454967,
+              "mean_us": 319.1281371982768,
+              "p90_us": 358.8989842683077,
+              "p99_us": 439.82043862342766
+            },
+            "bytes_equal_pread": true
+          },
+          {
+            "rows": 6,
+            "pattern": "fresh_rows",
+            "first_access_us": 491.713872179389,
+            "samples": 80,
+            "both_layers": {
+              "p50_us": 563.9750743284822,
+              "mean_us": 554.150328389369,
+              "p90_us": 616.5440194308758,
+              "p99_us": 687.0068097487083
+            },
+            "bytes_equal_pread": true
+          },
+          {
+            "rows": 512,
+            "pattern": "fresh_rows",
+            "first_access_us": 6379.749858751893,
+            "samples": 80,
+            "both_layers": {
+              "p50_us": 6345.634581521153,
+              "mean_us": 6345.594156300649,
+              "p90_us": 6391.976191662252,
+              "p99_us": 6445.330493152142
+            },
+            "bytes_equal_pread": true
+          }
+        ]
+      },
+      {
+        "mode": "aio",
+        "source": "experiments/03-engram-ram/results/aio.json",
+        "results": [
+          {
+            "rows": 1,
+            "pattern": "fresh_rows",
+            "first_access_us": 935.1570624858141,
+            "samples": 80,
+            "both_layers": {
+              "p50_us": 296.3780425488949,
+              "mean_us": 440.2133374242112,
+              "p90_us": 848.7958926707507,
+              "p99_us": 964.2302640713749
+            },
+            "bytes_equal_pread": true
+          },
+          {
+            "rows": 6,
+            "pattern": "fresh_rows",
+            "first_access_us": 704.3250370770693,
+            "samples": 80,
+            "both_layers": {
+              "p50_us": 595.9444679319859,
+              "mean_us": 605.9461215045303,
+              "p90_us": 633.1868702545762,
+              "p99_us": 717.0394598506391
+            },
+            "bytes_equal_pread": true
+          },
+          {
+            "rows": 512,
+            "pattern": "fresh_rows",
+            "first_access_us": 45505.49807026982,
+            "samples": 80,
+            "both_layers": {
+              "p50_us": 41955.49001451582,
+              "mean_us": 42679.8825559672,
+              "p90_us": 45401.89711842686,
+              "p99_us": 47588.22028292337
+            },
+            "bytes_equal_pread": true
+          }
+        ]
+      },
+      {
+        "mode": "mmap-first-touch",
+        "source": "experiments/03-engram-ram/results/mmap-first-touch.json",
+        "results": [
+          {
+            "rows": 1,
+            "pattern": "fresh_rows",
+            "first_access_us": 259.2520322650671,
+            "samples": 80,
+            "both_layers": {
+              "p50_us": 162.63104043900967,
+              "mean_us": 171.6294907964766,
+              "p90_us": 177.83804796636107,
+              "p99_us": 393.85992102324883
+            },
+            "bytes_equal_pread": true
+          },
+          {
+            "rows": 6,
+            "pattern": "fresh_rows",
+            "first_access_us": 965.8169001340866,
+            "samples": 80,
+            "both_layers": {
+              "p50_us": 828.8464741781354,
+              "mean_us": 848.9523344906047,
+              "p90_us": 903.1959343701601,
+              "p99_us": 1193.3459807187317
+            },
+            "bytes_equal_pread": true
+          },
+          {
+            "rows": 512,
+            "pattern": "fresh_rows",
+            "first_access_us": 62635.67507266998,
+            "samples": 80,
+            "both_layers": {
+              "p50_us": 25762.108387425542,
+              "mean_us": 26821.9120480353,
+              "p90_us": 34528.670273721225,
+              "p99_us": 42323.28321319072
+            },
+            "bytes_equal_pread": true
+          }
+        ]
+      }
+    ],
+    "review_source": "experiments/03-engram-ram/RESULTS.md",
+    "limitations": [
+      "Files were already fully resident in Linux page cache; disk-cold behavior was not measured.",
+      "No-prefault mode measures cold process page tables.",
+      "Modes used fresh processes; concurrent model loading/warmup elsewhere on the host may affect results.",
+      "R512 O_DIRECT AIO is diagnostic and chunked to the 1024-read production ring.",
+      "Read/wait component timing does not measure full-model speedup."
+    ],
+    "prefault": {
+      "prefault_seconds": 13.678382876096293,
+      "resident_mapped_bytes_after_prefault": 203073077576,
+      "max_rss_kib_after_prefault": 198902796
+    },
+    "gpu_correctness": {
+      "source": "experiments/03-engram-ram/results/gpu-check.json",
+      "cases": 30,
+      "exact_matches": 30,
+      "timing_published": false
+    }
+  },
+  "pipeline_stage_research": {
+    "adopted_in_published_1017_dispatch": false,
+    "note": "Optional S2 research showed a small R6 improvement; deployed integrated kernel keeps S3. Do not attribute 1017 end-to-end results to this candidate.",
+    "layers": [
+      {
+        "layer": 1,
+        "source": "experiments/06-expert-tuning/stages-layer1.json",
+        "rows": [
+          {
+            "picks": "clustered",
+            "R": 6,
+            "experts": 12,
+            "MB": 90.7,
+            "cp_ms": 0.1371,
+            "cp_med_ms": 0.1375,
+            "cp_GBps": 661.5,
+            "stage2_ms": 0.1238,
+            "stage2_med_ms": 0.1227,
+            "stage2_GBps": 732.8,
+            "stage2_bit_equal_cp": true,
+            "stage3_ms": 0.1253,
+            "stage3_med_ms": 0.1249,
+            "stage3_GBps": 723.8,
+            "stage3_bit_equal_cp": true,
+            "saving_ms": 0.0118,
+            "saving_pct": 8.6
+          },
+          {
+            "picks": "random",
+            "R": 6,
+            "experts": 34.5,
+            "MB": 240,
+            "cp_ms": 0.285,
+            "cp_med_ms": 0.2848,
+            "cp_GBps": 842,
+            "stage2_ms": 0.264,
+            "stage2_med_ms": 0.2665,
+            "stage2_GBps": 909.1,
+            "stage2_bit_equal_cp": true,
+            "stage3_ms": 0.2658,
+            "stage3_med_ms": 0.2681,
+            "stage3_GBps": 903,
+            "stage3_bit_equal_cp": true,
+            "saving_ms": 0.0192,
+            "saving_pct": 6.7
+          }
+        ],
+        "invariance": {
+          "cp": {
+            "windows": 10,
+            "rows_checked": 65,
+            "rows_differing": 0
+          },
+          "stage2": {
+            "windows": 10,
+            "rows_checked": 65,
+            "rows_differing": 0,
+            "solo_bit_equal_cp": true
+          },
+          "stage3": {
+            "windows": 10,
+            "rows_checked": 65,
+            "rows_differing": 0,
+            "solo_bit_equal_cp": true
+          }
+        }
+      },
+      {
+        "layer": 10,
+        "source": "experiments/06-expert-tuning/stages-layer10.json",
+        "rows": [
+          {
+            "picks": "clustered",
+            "R": 1,
+            "experts": 6,
+            "MB": 50.9,
+            "cp_ms": 0.0845,
+            "cp_med_ms": 0.0845,
+            "cp_GBps": 601.9,
+            "stage1_ms": 0.1028,
+            "stage1_med_ms": 0.1028,
+            "stage1_GBps": 494.7,
+            "stage1_bit_equal_cp": true,
+            "stage2_ms": 0.1003,
+            "stage2_med_ms": 0.1003,
+            "stage2_GBps": 507,
+            "stage2_bit_equal_cp": true,
+            "stage3_ms": 0.1015,
+            "stage3_med_ms": 0.1016,
+            "stage3_GBps": 501,
+            "stage3_bit_equal_cp": true,
+            "stage4_ms": 0.1023,
+            "stage4_med_ms": 0.1022,
+            "stage4_GBps": 497.4,
+            "stage4_bit_equal_cp": true,
+            "saving_ms": -0.0178,
+            "saving_pct": -21.1
+          },
+          {
+            "picks": "clustered",
+            "R": 6,
+            "experts": 12,
+            "MB": 90.7,
+            "cp_ms": 0.1366,
+            "cp_med_ms": 0.1372,
+            "cp_GBps": 663.7,
+            "stage1_ms": 0.1314,
+            "stage1_med_ms": 0.1301,
+            "stage1_GBps": 690.2,
+            "stage1_bit_equal_cp": true,
+            "stage2_ms": 0.1243,
+            "stage2_med_ms": 0.1239,
+            "stage2_GBps": 729.4,
+            "stage2_bit_equal_cp": true,
+            "stage3_ms": 0.1255,
+            "stage3_med_ms": 0.125,
+            "stage3_GBps": 722.6,
+            "stage3_bit_equal_cp": true,
+            "stage4_ms": 0.125,
+            "stage4_med_ms": 0.1233,
+            "stage4_GBps": 725.5,
+            "stage4_bit_equal_cp": true,
+            "saving_ms": 0.0116,
+            "saving_pct": 8.5
+          },
+          {
+            "picks": "random",
+            "R": 1,
+            "experts": 6,
+            "MB": 50.9,
+            "cp_ms": 0.0851,
+            "cp_med_ms": 0.085,
+            "cp_GBps": 598.1,
+            "stage1_ms": 0.1033,
+            "stage1_med_ms": 0.1034,
+            "stage1_GBps": 492.5,
+            "stage1_bit_equal_cp": true,
+            "stage2_ms": 0.1009,
+            "stage2_med_ms": 0.1007,
+            "stage2_GBps": 504.4,
+            "stage2_bit_equal_cp": true,
+            "stage3_ms": 0.1015,
+            "stage3_med_ms": 0.1014,
+            "stage3_GBps": 501.2,
+            "stage3_bit_equal_cp": true,
+            "stage4_ms": 0.1025,
+            "stage4_med_ms": 0.1024,
+            "stage4_GBps": 496.2,
+            "stage4_bit_equal_cp": true,
+            "saving_ms": -0.0174,
+            "saving_pct": -20.4
+          },
+          {
+            "picks": "random",
+            "R": 6,
+            "experts": 34.333333333333336,
+            "MB": 238.9,
+            "cp_ms": 0.285,
+            "cp_med_ms": 0.2824,
+            "cp_GBps": 838.2,
+            "stage1_ms": 0.2777,
+            "stage1_med_ms": 0.2754,
+            "stage1_GBps": 860.1,
+            "stage1_bit_equal_cp": true,
+            "stage2_ms": 0.2631,
+            "stage2_med_ms": 0.2605,
+            "stage2_GBps": 907.8,
+            "stage2_bit_equal_cp": true,
+            "stage3_ms": 0.2646,
+            "stage3_med_ms": 0.2618,
+            "stage3_GBps": 902.7,
+            "stage3_bit_equal_cp": true,
+            "stage4_ms": 0.265,
+            "stage4_med_ms": 0.2627,
+            "stage4_GBps": 901.3,
+            "stage4_bit_equal_cp": true,
+            "saving_ms": 0.02,
+            "saving_pct": 7
+          }
+        ],
+        "invariance": {
+          "cp": {
+            "windows": 10,
+            "rows_checked": 65,
+            "rows_differing": 0
+          },
+          "stage1": {
+            "windows": 10,
+            "rows_checked": 65,
+            "rows_differing": 0,
+            "solo_bit_equal_cp": true
+          },
+          "stage2": {
+            "windows": 10,
+            "rows_checked": 65,
+            "rows_differing": 0,
+            "solo_bit_equal_cp": true
+          },
+          "stage3": {
+            "windows": 10,
+            "rows_checked": 65,
+            "rows_differing": 0,
+            "solo_bit_equal_cp": true
+          },
+          "stage4": {
+            "windows": 10,
+            "rows_checked": 65,
+            "rows_differing": 0,
+            "solo_bit_equal_cp": true
+          }
+        }
+      },
+      {
+        "layer": 35,
+        "source": "experiments/06-expert-tuning/stages-layer35.json",
+        "rows": [
+          {
+            "picks": "clustered",
+            "R": 6,
+            "experts": 12,
+            "MB": 90.7,
+            "cp_ms": 0.1373,
+            "cp_med_ms": 0.1376,
+            "cp_GBps": 660.3,
+            "stage2_ms": 0.1238,
+            "stage2_med_ms": 0.1223,
+            "stage2_GBps": 732.4,
+            "stage2_bit_equal_cp": true,
+            "stage3_ms": 0.1251,
+            "stage3_med_ms": 0.1245,
+            "stage3_GBps": 724.9,
+            "stage3_bit_equal_cp": true,
+            "saving_ms": 0.0122,
+            "saving_pct": 8.9
+          },
+          {
+            "picks": "random",
+            "R": 6,
+            "experts": 34.5,
+            "MB": 240,
+            "cp_ms": 0.2852,
+            "cp_med_ms": 0.2844,
+            "cp_GBps": 841.5,
+            "stage2_ms": 0.2643,
+            "stage2_med_ms": 0.2663,
+            "stage2_GBps": 908.1,
+            "stage2_bit_equal_cp": true,
+            "stage3_ms": 0.2657,
+            "stage3_med_ms": 0.2676,
+            "stage3_GBps": 903.1,
+            "stage3_bit_equal_cp": true,
+            "saving_ms": 0.0195,
+            "saving_pct": 6.8
+          }
+        ],
+        "invariance": {
+          "cp": {
+            "windows": 10,
+            "rows_checked": 65,
+            "rows_differing": 0
+          },
+          "stage2": {
+            "windows": 10,
+            "rows_checked": 65,
+            "rows_differing": 0,
+            "solo_bit_equal_cp": true
+          },
+          "stage3": {
+            "windows": 10,
+            "rows_checked": 65,
+            "rows_differing": 0,
+            "solo_bit_equal_cp": true
+          }
+        }
+      }
+    ]
+  },
+  "sources": {
+    "experiments/02-expert-numerics/expert-rounding-v1.json": {
+      "relative_source": "experiments/02-expert-numerics/expert-rounding-v1.json",
+      "sha256": "a5d20eeef71e4e6a4d74cc0e5d3b82f45a96050359f5b5816b283893f8c5f3ba"
+    },
+    "experiments/02-expert-numerics/tools/dsv41/expert_decode_bench.py": {
+      "relative_source": "experiments/02-expert-numerics/tools/dsv41/expert_decode_bench.py",
+      "sha256": "c45094876bcf93fbb7bfe7bb558b8ab627db9b137af71787e6b70aa86fd3dbef"
+    },
+    "experiments/02-expert-numerics/NUMERICS.md": {
+      "relative_source": "experiments/02-expert-numerics/NUMERICS.md",
+      "sha256": "80bbc17a6355ad3e5b273fd55101c320b67764d9c2987f8764f96d4ff7d24d8a"
+    },
+    "experiments/06-expert-tuning/comm-comparison.json": {
+      "relative_source": "experiments/06-expert-tuning/comm-comparison.json",
+      "sha256": "76702230788228f5961bc08974305938e7183a10cb9705c50fd39823d1f5b7fa"
+    },
+    "experiments/06-expert-tuning/h200_comm_bench.py": {
+      "relative_source": "experiments/06-expert-tuning/h200_comm_bench.py",
+      "sha256": "088d16634442fe590102bbfe6e32fd0bbcea597a4db0f96d2a4ec7170ac28ddc"
+    },
+    "experiments/03-engram-ram/RESULTS.md": {
+      "relative_source": "experiments/03-engram-ram/RESULTS.md",
+      "sha256": "12ff08b406b05dc0fdd710e7fd67e51ee321405509df779ab1091488c29e9bde"
+    },
+    "experiments/03-engram-ram/results/mmap-resident.json": {
+      "relative_source": "experiments/03-engram-ram/results/mmap-resident.json",
+      "sha256": "b4af346bc77ff5d4e5f8656a98d13c698c9d893daa60780fb60b208360c80dfb"
+    },
+    "experiments/03-engram-ram/results/pread-1.json": {
+      "relative_source": "experiments/03-engram-ram/results/pread-1.json",
+      "sha256": "4963fe8e61e9fb4eda5d6926fc0343827a7b1b29b204164329123c1714aa17c0"
+    },
+    "experiments/03-engram-ram/results/pread-8.json": {
+      "relative_source": "experiments/03-engram-ram/results/pread-8.json",
+      "sha256": "9b2ae4e8e7daf5519673ddd6338b55b3da43eb5db51f13ab70ed7e924e495479"
+    },
+    "experiments/03-engram-ram/results/pread-128.json": {
+      "relative_source": "experiments/03-engram-ram/results/pread-128.json",
+      "sha256": "6245e059aacdc878e1705b49e9844433cc6cc25ce291a788afa9c8870cb346e9"
+    },
+    "experiments/03-engram-ram/results/aio.json": {
+      "relative_source": "experiments/03-engram-ram/results/aio.json",
+      "sha256": "be9ffcbb7bbabcf55e8361b7727239420ddfa6695a0d5818d0b4beb2589e899f"
+    },
+    "experiments/03-engram-ram/results/mmap-first-touch.json": {
+      "relative_source": "experiments/03-engram-ram/results/mmap-first-touch.json",
+      "sha256": "4225cb585ff4a029fb134df174d8b6133fdfa4c2e56e01e788a77ad0bfe3fbe0"
+    },
+    "experiments/03-engram-ram/results/gpu-check.json": {
+      "relative_source": "experiments/03-engram-ram/results/gpu-check.json",
+      "sha256": "a0dd81034d460ad60d9432fcfd4ac1944982bc3ca6daaf56e7bcb142904a75d5"
+    },
+    "experiments/06-expert-tuning/stages-layer1.json": {
+      "relative_source": "experiments/06-expert-tuning/stages-layer1.json",
+      "sha256": "c339d4fbeb14b2bc9dac8635b5e17e71eb500c6dc9816e1aef4641945bfd8dad"
+    },
+    "experiments/06-expert-tuning/stages-layer10.json": {
+      "relative_source": "experiments/06-expert-tuning/stages-layer10.json",
+      "sha256": "a530d78825a4023f5bc74b572103ee230014329e6988f21c3a56fa6708e93d0f"
+    },
+    "experiments/06-expert-tuning/stages-layer35.json": {
+      "relative_source": "experiments/06-expert-tuning/stages-layer35.json",
+      "sha256": "2c0f742b546892bcedbfb5de882f685fdfbceba0e03f90d9661d261d27fa6a08"
+    }
+  }
+}

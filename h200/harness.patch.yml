@@ -1,0 +1,33 @@
+# DeepSeek Harness 0.2.1-rc.2 custom Messages provider.
+# H200_API_KEY is a credential reference; never put a real key in this file.
+- id: llm-pi-ai
+  config:
+    providers:
+      h200-anthropic:
+        displayName: H200 DeepSeek · Anthropic Messages
+        apiKeyEnv: H200_API_KEY
+        api: anthropic-messages
+        baseURL: !!js process.env.H200_ANTHROPIC_BASE_URL || 'http://127.0.0.1:18891'
+        streamIdleTimeoutMs: 600000
+        compat:
+          forceAdaptiveThinking: true
+          allowEmptySignature: true
+          supportsEagerToolInputStreaming: false
+          supportsCacheControlOnTools: false
+          supportsStrictTools: false
+        models:
+          - id: DeepSeek-V4.1-Flash-1017-H200
+            name: DeepSeek V4.1 Flash 1017 · H200
+            contextWindow: 1048576
+            maxTokens: 32768
+            input: [text]
+            reasoningEfforts:
+              'off':
+              low: low
+              high: high
+              max: max
+- id: agent-default-model
+  config:
+    provider: h200-anthropic
+    model: DeepSeek-V4.1-Flash-1017-H200
+    reasoningEffort: !!js process.env.H200_REASONING || 'max'

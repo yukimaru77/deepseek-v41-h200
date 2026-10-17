@@ -1,0 +1,24 @@
+{
+  "measured_date": "2026-10-18 JST",
+  "model": "DeepSeek-V4.1-Flash-1017-H200",
+  "context_window": 1048576,
+  "harness": {
+    "version": "0.2.1-rc.2",
+    "protocol": "anthropic-messages",
+    "checks": {
+      "max_wire_effort": true,
+      "thinking_emitted": true,
+      "read_tool_completed": true,
+      "thinking_replayed": true,
+      "exact_final": true,
+      "off_has_no_thinking": true,
+      "off_answer": true,
+      "stderr_empty": true
+    }
+  },
+  "claude": {
+    "version": "2.1.302",
+    "passed": true
+  },
+  "scope": "Client compatibility, not a throughput benchmark. Private endpoints, credentials, file paths, session IDs and message contents omitted."
+}

@@ -1,0 +1,17 @@
+.git
+data
+h200-data
+models
+cache
+logs
+benchmark-runs
+.env
+.env.*
+**/__pycache__
+**/.pytest_cache
+**/*.egg-info
+**/*.safetensors
+**/*.gguf
+**/*.pt
+**/*.pth
+*.log

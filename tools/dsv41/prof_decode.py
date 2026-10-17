@@ -1,0 +1,123 @@
+"""Decode-step profile of the engine on TP ranks: wall time a token and the top CUDA / CPU ops (rank 0 prints).
+
+  python3 prof_decode.py --rank R --master <HEAD_IP> --model M [--engram E] [--dspark] [--out F]
+
+--master is rank 0's address on the link between the machines (default 127.0.0.1, which only suits --world 1).
+"""
+
+import argparse
+import os
+import json
+import time
+
+import torch
+
+
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("--rank", type=int, default=0)
+    p.add_argument("--world", type=int, default=2)
+    p.add_argument("--master", default="127.0.0.1", help="rank 0's address on the link between the machines")
+    p.add_argument("--port", type=int, default=29662)
+    p.add_argument("--model", required=True)
+    p.add_argument("--engram")
+    p.add_argument("--prompt-len", type=int, default=512)
+    p.add_argument("--steps", type=int, default=32)
+    p.add_argument("--profile-steps", type=int, default=4)
+    p.add_argument("--out")
+    p.add_argument("--dspark", action="store_true")
+    p.add_argument("--chunk", type=int, default=512)
+    a = p.parse_args()
+    torch.cuda.set_device(0)
+    from tensorfold.families.deepseek_v41.cuda.model import Comm, Engram, Model
+    from tensorfold.families.deepseek_v41.cuda.weights import load
+    from tensorfold.families.deepseek_v41.ops import compressed_token_map
+
+    nccl = None
+    if a.world > 1:
+        from tensorfold.cuda.comm import NCCL
+
+        nccl = NCCL(a.rank, a.world, a.master, a.port)
+    w = load(a.model, a.rank, a.world, log=lambda m: None, dspark=a.dspark)
+    eng = None
+    if a.engram:
+        tm, _ = compressed_token_map(f"{a.model}/tokenizer.json")
+        eng = Engram(a.engram, w.cfg, tm, a.rank, a.world)
+    model = Model(w, Comm(nccl, a.world, rdma_bytes=8 << 20), eng)
+    g = torch.Generator().manual_seed(1)
+    ids = torch.randint(1000, 100000, (a.prompt_len,), generator=g).cuda()
+    sc = model.new_cache(a.prompt_len + a.steps + a.profile_steps + 8)
+    from tensorfold.families.deepseek_v41.cuda import model as M
+    M.TIMES.clear()
+    t0 = time.time()
+    hl = ids.tolist()
+    for s in range(0, a.prompt_len, a.chunk):
+        last = model.forward(sc, ids[s:s + a.chunk], s, host_ids=hl[s:s + a.chunk])
+    torch.cuda.synchronize()
+    prefill_s = time.time() - t0
+    if os.environ.get("PROFILE_PREFILL") == "1":
+        from torch.profiler import ProfilerActivity, profile
+        sc2 = model.new_cache(2 * a.chunk + 8)
+        model.forward(sc2, ids[:a.chunk], 0, host_ids=hl[:a.chunk])
+        torch.cuda.synchronize()
+        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA]) as prof:
+            model.forward(sc2, ids[a.chunk:2 * a.chunk], a.chunk, host_ids=hl[a.chunk:2 * a.chunk])
+            torch.cuda.synchronize()
+        if a.rank == 0:
+            print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=30), flush=True)
+        return
+    if M.TIMING and a.rank == 0:
+        print(json.dumps({"prefill": {k: round(v, 3) for k, v in sorted(M.TIMES.items())}, "prefill_s": prefill_s}),
+              flush=True)
+    pos = a.prompt_len
+    tok = last[0].argmax().view(1)
+    times = []
+    runner = None
+    if os.environ.get("GRAPH") == "1":
+        from tensorfold.families.deepseek_v41.cuda.graph import GraphRunner
+        runner = GraphRunner(model, 4)
+        sc.host = hl[:]
+
+    def step(tok, pos):
+        if runner is not None:
+            lg, _ = runner.forward(sc, [int(tok)], pos, False)
+            return lg
+        return model.forward(sc, tok, pos)
+
+    for _ in range(a.steps):
+        torch.cuda.synchronize()
+        t1 = time.perf_counter()
+        last = step(tok, pos)
+        tok = last[0].argmax().view(1)
+        torch.cuda.synchronize()
+        times.append(time.perf_counter() - t1)
+        pos += 1
+    from tensorfold.families.deepseek_v41.cuda import model as M
+    if M.TIMING:
+        M.TIMES.clear()
+        for _ in range(8):
+            last = model.forward(sc, tok, pos)
+            tok = last[0].argmax().view(1)
+            pos += 1
+        if a.rank == 0:
+            print(json.dumps({k: round(1000 * v / 8, 3) for k, v in sorted(M.TIMES.items())}), flush=True)
+        return
+    from torch.profiler import ProfilerActivity, profile
+
+    with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA]) as prof:
+        for _ in range(a.profile_steps):
+            last = step(tok, pos)
+            tok = last[0].argmax().view(1)
+            pos += 1
+        torch.cuda.synchronize()
+    if a.rank == 0:
+        times.sort()
+        print(json.dumps({"prefill_s": prefill_s, "prompt_len": a.prompt_len,
+                          "decode_ms_median": 1000 * times[len(times) // 2], "decode_ms_min": 1000 * times[0]}))
+        ka = prof.key_averages()
+        print(ka.table(sort_by="cuda_time_total", row_limit=40))
+        print(ka.table(sort_by="self_cpu_time_total", row_limit=25))
+
+
+if __name__ == "__main__":
+    main()

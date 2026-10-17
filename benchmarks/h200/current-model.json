@@ -1,0 +1,865 @@
+{
+  "schema_version": 1,
+  "model": "DeepSeek-V4.1-Flash-1017",
+  "quantization": "EXL3 2.9bpw checkpoint; 1017 MTP dense tensors use 6-bit trellis",
+  "campaign_date_utc": "2026-10-17",
+  "hardware": {
+    "gpu": "NVIDIA H200 NVL",
+    "gpu_count": 2,
+    "tensor_parallel": 2,
+    "reported_total_mib_per_gpu": 143771,
+    "cuda_usable_bytes_per_gpu": 150110273536
+  },
+  "assets": [
+    {
+      "repository": "LibertAIDAI/DeepSeek-V4.1-Flash-1017-EXL3-2.9bpw",
+      "revision": "afc7aa0aab98ee735c0f54e0a122019af1ac08f1"
+    },
+    {
+      "repository": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "revision": "1bae0e1088993b9b82de08f59de5be5a34e42170"
+    }
+  ],
+  "configuration": {
+    "context_tokens": 1048576,
+    "kv_pool_tokens": 37822464,
+    "max_active_streams": 63,
+    "prefill_chunk_tokens": 2048,
+    "bounded_decoder_replay": true,
+    "decoder_replay_window_tokens": 128,
+    "engram_readonly_mmap": true,
+    "engram_startup_prefault": true,
+    "cpu_pinned_snapshots": true,
+    "round_graph_lru_limit": 64,
+    "mtp_max_drafts": 5,
+    "parallel_depth_schedule": [
+      5,
+      5,
+      3,
+      3,
+      2,
+      1,
+      1,
+      1,
+      0
+    ],
+    "expert_dispatch": "H200 R1 cp / multirow fused",
+    "omp_threads": 8,
+    "mkl_threads": 8
+  },
+  "conditions_sources": [
+    "experiments/09-h200-1017/h200_env.sh",
+    "experiments/09-h200-1017/serve_h200.sh",
+    "experiments/09-h200-1017/results/download-manifest.json"
+  ],
+  "single_stream_decode": {
+    "source": "experiments/09-h200-1017/results/decode.json",
+    "method_source": "experiments/09-h200-1017/tools/dsv41/kit_bench.py",
+    "temperature": 0,
+    "thinking": false,
+    "streams": 1,
+    "warmup_output_tokens_per_workload": 32,
+    "max_output_tokens": 512,
+    "repetitions": 3,
+    "metric": "(reported_completion_tokens - 1) / (last_nonempty_content_SSE_time - first_nonempty_content_SSE_time)",
+    "ttft_definition": "client request start to first nonempty content SSE chunk",
+    "cache_state": "warm-up performed; prefix-cache hit counts not retained in this result file",
+    "rows": [
+      {
+        "max_tokens": 512,
+        "reps": 3,
+        "decode_tps_median": 256.5261786158282,
+        "decode_tps_all": [
+          256.907,
+          256.526,
+          256.455
+        ],
+        "tokens_all": [
+          512,
+          512,
+          512
+        ],
+        "chunks_all": [
+          129,
+          129,
+          129
+        ],
+        "ttft_s_median": 0.0694473129697144,
+        "identical_texts": true,
+        "workload": "code"
+      },
+      {
+        "max_tokens": 512,
+        "reps": 3,
+        "decode_tps_median": 144.3795519311269,
+        "decode_tps_all": [
+          144.435,
+          144.235,
+          144.38
+        ],
+        "tokens_all": [
+          512,
+          512,
+          512
+        ],
+        "chunks_all": [
+          272,
+          272,
+          272
+        ],
+        "ttft_s_median": 0.07145092822611332,
+        "identical_texts": true,
+        "workload": "prose"
+      },
+      {
+        "max_tokens": 512,
+        "reps": 3,
+        "decode_tps_median": 293.5847662103712,
+        "decode_tps_all": [
+          293.594,
+          293.563,
+          293.585
+        ],
+        "tokens_all": [
+          512,
+          512,
+          512
+        ],
+        "chunks_all": [
+          108,
+          108,
+          108
+        ],
+        "ttft_s_median": 0.11453525302931666,
+        "identical_texts": true,
+        "workload": "structured"
+      }
+    ]
+  },
+  "short_session_capacity": {
+    "source": "experiments/09-h200-1017/results-validation/validation.json",
+    "method_source": "experiments/09-h200-1017/validate_capacity.py",
+    "requests": 63,
+    "input_tokens_each": [
+      90
+    ],
+    "output_tokens_each": 256,
+    "ignore_eos": true,
+    "temperature": 0,
+    "exact_matches_to_individual_draft_disabled_baselines": 63,
+    "independent_marker_matches": 63,
+    "peak_simultaneous_decoding": 63,
+    "passed": true,
+    "burst_wall_seconds": 24.05877995491028,
+    "total_output_tokens": 16128,
+    "derived_end_to_end_output_tokens_per_second": 670.3581823445022,
+    "rate_limitation": "Capacity test; end-to-end burst includes prefill and queueing, not a dedicated decode-throughput benchmark."
+  },
+  "near_1m": {
+    "source": "experiments/09-h200-1017/results-validation/validation.json",
+    "server_log_source": "experiments/09-h200-1017/logs/server-20261017T181029Z-rank0.log",
+    "input_definition": "Deterministic random English-word filler, three passphrases and three Japanese fact records at 10/50/90 percent of word positions; two distinct request prefixes",
+    "seed": 20261018,
+    "depths_by_word_position": [
+      0.1,
+      0.5,
+      0.9
+    ],
+    "two_requests_submitted_together": true,
+    "submitted_total_prompt_tokens": 2093910,
+    "cold_cache_readout": [
+      0,
+      0
+    ],
+    "all_six_passphrases_found": true,
+    "japanese_facts_total_and_date_order_verified": true,
+    "rows": [
+      {
+        "case": "long_1",
+        "elapsed_s": 266.4653322696686,
+        "prompt_tokens": 1046955,
+        "completion_tokens": 24,
+        "cached_tokens": 0,
+        "finish_reason": "stop"
+      },
+      {
+        "case": "long_0",
+        "elapsed_s": 530.6979110240936,
+        "prompt_tokens": 1046955,
+        "completion_tokens": 24,
+        "cached_tokens": 0,
+        "finish_reason": "stop"
+      },
+      {
+        "case": "long_cached_0",
+        "elapsed_s": 0.8863458633422852,
+        "prompt_tokens": 1046955,
+        "completion_tokens": 24,
+        "cached_tokens": 1046528,
+        "finish_reason": "stop"
+      },
+      {
+        "case": "long_cached_1",
+        "elapsed_s": 0.833202600479126,
+        "prompt_tokens": 1046955,
+        "completion_tokens": 24,
+        "cached_tokens": 1046528,
+        "finish_reason": "stop"
+      },
+      {
+        "case": "japanese_summary",
+        "elapsed_s": 1.6487574577331543,
+        "prompt_tokens": 1046981,
+        "completion_tokens": 201,
+        "cached_tokens": 1046528,
+        "finish_reason": "stop"
+      }
+    ],
+    "server_timing_rows": [
+      {
+        "source_line": 1012,
+        "prompt_tokens": 1046955,
+        "cached_tokens": 0,
+        "completion_tokens": 24,
+        "server_decode_tps": 79.4,
+        "server_ttft_s": 265.88,
+        "server_prefill_s": 265.35,
+        "derived_uncached_input_tokens_per_prefill_second": 3945.5624646693045
+      },
+      {
+        "source_line": 1526,
+        "prompt_tokens": 1046955,
+        "cached_tokens": 0,
+        "completion_tokens": 24,
+        "server_decode_tps": 107.4,
+        "server_ttft_s": 530.23,
+        "server_prefill_s": 263.92,
+        "derived_uncached_input_tokens_per_prefill_second": 3966.940739618066
+      },
+      {
+        "source_line": 1530,
+        "prompt_tokens": 1046955,
+        "cached_tokens": 1046528,
+        "completion_tokens": 24,
+        "server_decode_tps": 202.7,
+        "server_ttft_s": 0.61,
+        "server_prefill_s": 0.42,
+        "derived_uncached_input_tokens_per_prefill_second": 1016.6666666666667
+      },
+      {
+        "source_line": 1534,
+        "prompt_tokens": 1046955,
+        "cached_tokens": 1046528,
+        "completion_tokens": 24,
+        "server_decode_tps": 217.7,
+        "server_ttft_s": 0.57,
+        "server_prefill_s": 0.4,
+        "derived_uncached_input_tokens_per_prefill_second": 1067.5
+      },
+      {
+        "source_line": 1539,
+        "prompt_tokens": 1046981,
+        "cached_tokens": 1046528,
+        "completion_tokens": 201,
+        "server_decode_tps": 215.3,
+        "server_ttft_s": 0.58,
+        "server_prefill_s": 0.41,
+        "derived_uncached_input_tokens_per_prefill_second": 1104.878048780488
+      }
+    ],
+    "limits": [
+      "Only two near-1M requests were executed; 36 full contexts were not executed concurrently.",
+      "The second cold request includes queueing in TTFT; prefill is separately reported by the server.",
+      "Cached followups reuse 1046528 prompt tokens; their latency is not cold 1M prefill.",
+      "The fixture is synthetic retrieval and fact retention, not general long-document understanding.",
+      "Bounded decoder replay enabled; equality to exact full prefill has not been established."
+    ],
+    "review_source": "experiments/09-h200-1017/results/validation-review.json"
+  },
+  "gpu_memory": {
+    "source": "experiments/09-h200-1017/results/api-memory.json",
+    "sampling_interval_s": 2,
+    "scope": "capacity and quality suite",
+    "gpu": {
+      "0": {
+        "peak_used_mib": 141941,
+        "minimum_free_mib": 1216
+      },
+      "1": {
+        "peak_used_mib": 141849,
+        "minimum_free_mib": 1308
+      }
+    },
+    "limitation": "Sampled every 2 seconds; these are observed peaks, not guaranteed instantaneous worst-case bounds."
+  },
+  "startup_capacity": {
+    "sources": [
+      "experiments/09-h200-1017/results-capacity/startup-rank0.json",
+      "experiments/09-h200-1017/results-capacity/startup-rank1.json"
+    ],
+    "ranks": [
+      {
+        "rank": 0,
+        "context": 1048576,
+        "pool_tokens": 37822464,
+        "parallel": 63,
+        "maximum_decode_shape": [
+          63,
+          1048576
+        ],
+        "after_maximum_graph": {
+          "allocated": 142508813312,
+          "reserved": 144160325632,
+          "device_free": 3478650880,
+          "device_total": 150110273536,
+          "peak_allocated": 143415793664
+        },
+        "after_full_graph_cache": {
+          "allocated": 142534866432,
+          "reserved": 144187588608,
+          "device_free": 2849505280,
+          "device_total": 150110273536,
+          "peak_allocated": 143415793664
+        },
+        "resident_round_graphs": 64,
+        "graph_evictions": 44,
+        "snapshot_device": "cpu",
+        "snapshot_pinned": true,
+        "batch_finite": true,
+        "far_extent_base": 37818368,
+        "snapshot_roundtrip_exact": true,
+        "rope_rows": 1052672,
+        "with_1gib_extra_workspace": {
+          "allocated": 143608743424,
+          "reserved": 145265524736,
+          "device_free": 1771569152,
+          "device_total": 150110273536,
+          "peak_allocated": 143608743424
+        },
+        "after_checks": {
+          "allocated": 142535001600,
+          "reserved": 144189685760,
+          "device_free": 2847408128,
+          "device_total": 150110273536,
+          "peak_allocated": 143608743424
+        },
+        "passed": true,
+        "batch_exact_rows_passed": 63,
+        "batch_exact_rows_total": 63
+      },
+      {
+        "rank": 1,
+        "context": 1048576,
+        "pool_tokens": 37822464,
+        "parallel": 63,
+        "maximum_decode_shape": [
+          63,
+          1048576
+        ],
+        "after_maximum_graph": {
+          "allocated": 142508813312,
+          "reserved": 144160325632,
+          "device_free": 3478650880,
+          "device_total": 150110273536,
+          "peak_allocated": 143415793664
+        },
+        "after_full_graph_cache": {
+          "allocated": 142534866432,
+          "reserved": 144187588608,
+          "device_free": 2849505280,
+          "device_total": 150110273536,
+          "peak_allocated": 143415793664
+        },
+        "resident_round_graphs": 64,
+        "graph_evictions": 44,
+        "snapshot_device": "cpu",
+        "snapshot_pinned": true,
+        "batch_finite": true,
+        "far_extent_base": 37818368,
+        "snapshot_roundtrip_exact": true,
+        "rope_rows": 1052672,
+        "with_1gib_extra_workspace": {
+          "allocated": 143608743424,
+          "reserved": 145265524736,
+          "device_free": 1771569152,
+          "device_total": 150110273536,
+          "peak_allocated": 143608743424
+        },
+        "after_checks": {
+          "allocated": 142535001600,
+          "reserved": 144189685760,
+          "device_free": 2847408128,
+          "device_total": 150110273536,
+          "peak_allocated": 143608743424
+        },
+        "passed": true,
+        "batch_exact_rows_passed": 63,
+        "batch_exact_rows_total": 63
+      }
+    ],
+    "arithmetic": {
+      "pool_tokens": 37822464,
+      "bytes_per_pool_token_per_gpu": 898,
+      "pool_gib_per_gpu": 31.631973266601562,
+      "request_context_tokens": 1048576,
+      "extent_alignment_tokens": 2048,
+      "internal_extent_headroom_rows": 75,
+      "rounded_full_context_extent_tokens": 1050624,
+      "full_context_extents_by_memory": 36,
+      "claim_type": "Allocation arithmetic, not 36 concurrent full-context API requests."
+    }
+  },
+  "quality": {
+    "source": "experiments/09-h200-1017/results-validation/quality.json",
+    "summary_source": "experiments/09-h200-1017/results-validation/summary.json",
+    "previous_source": "experiments/08-h200-capacity/results-capacity/final/quality.json",
+    "method_source": "experiments/09-h200-1017/tools/dsv41/quality_eval.py",
+    "thinking": false,
+    "temperature": 0,
+    "parallel": 63,
+    "mmlu_max_output_tokens": 16,
+    "gsm8k_max_output_tokens": 2048,
+    "seed_mmlu": 20261004,
+    "seed_gsm8k": 20261005,
+    "subset_digest": "09c2e6cc43e275af",
+    "indices": {
+      "mmlu": [
+        204,
+        288,
+        357,
+        414,
+        484,
+        496,
+        802,
+        830,
+        840,
+        887,
+        923,
+        953,
+        983,
+        999,
+        1209,
+        1367,
+        1549,
+        1732,
+        1883,
+        1922,
+        1932,
+        2072,
+        2076,
+        2093,
+        2148,
+        2159,
+        2269,
+        2324,
+        2373,
+        2383,
+        2426,
+        2446,
+        2540,
+        2671,
+        2860,
+        2938,
+        3071,
+        3106,
+        3124,
+        3190,
+        3356,
+        3410,
+        3428,
+        3507,
+        3528,
+        3531,
+        3553,
+        3570,
+        3605,
+        3622,
+        3702,
+        3750,
+        4058,
+        4078,
+        4164,
+        4167,
+        4276,
+        4377,
+        4477,
+        4489,
+        4490,
+        4496,
+        4567,
+        4600,
+        4755,
+        4761,
+        4799,
+        4825,
+        4843,
+        4929,
+        4941,
+        4955,
+        4960,
+        5022,
+        5161,
+        5200,
+        5342,
+        5369,
+        5464,
+        5473,
+        5516,
+        5547,
+        5578,
+        5839,
+        5875,
+        5889,
+        5993,
+        6044,
+        6051,
+        6138,
+        6249,
+        6336,
+        6436,
+        6447,
+        6462,
+        6513,
+        6559,
+        6832,
+        6894,
+        6927,
+        6964,
+        6969,
+        7003,
+        7043,
+        7051,
+        7259,
+        7285,
+        7574,
+        7694,
+        7798,
+        7932,
+        7985,
+        8032,
+        8209,
+        8288,
+        8325,
+        8401,
+        8409,
+        8439,
+        8571,
+        8637,
+        8656,
+        8855,
+        8903,
+        9064,
+        9065,
+        9084,
+        9249,
+        9341,
+        9449,
+        9549,
+        9686,
+        9725,
+        9762,
+        9780,
+        9805,
+        9917,
+        9980,
+        10003,
+        10006,
+        10057,
+        10078,
+        10159,
+        10190,
+        10222,
+        10280,
+        10346,
+        10421,
+        10432,
+        10507,
+        10524,
+        10566,
+        10726,
+        10798,
+        10904,
+        10906,
+        10932,
+        10940,
+        11000,
+        11002,
+        11092,
+        11149,
+        11329,
+        11363,
+        11381,
+        11432,
+        11561,
+        11634,
+        11639,
+        11653,
+        11672,
+        11773,
+        11866,
+        11911,
+        11990,
+        12124,
+        12160,
+        12177,
+        12198,
+        12285,
+        12362,
+        12615,
+        12617,
+        12767,
+        12815,
+        12936,
+        13127,
+        13150,
+        13193,
+        13234,
+        13500,
+        13544,
+        13559,
+        13563,
+        13598,
+        13643,
+        13672,
+        13764,
+        13830,
+        13980
+      ],
+      "gsm8k": [
+        4,
+        19,
+        28,
+        38,
+        43,
+        44,
+        52,
+        82,
+        86,
+        108,
+        109,
+        113,
+        131,
+        139,
+        141,
+        146,
+        187,
+        194,
+        225,
+        228,
+        277,
+        294,
+        306,
+        308,
+        316,
+        320,
+        342,
+        352,
+        362,
+        365,
+        375,
+        428,
+        446,
+        465,
+        472,
+        495,
+        503,
+        511,
+        512,
+        529,
+        534,
+        546,
+        560,
+        561,
+        566,
+        582,
+        588,
+        595,
+        601,
+        606,
+        611,
+        617,
+        623,
+        635,
+        636,
+        643,
+        650,
+        659,
+        688,
+        711,
+        730,
+        738,
+        740,
+        751,
+        752,
+        768,
+        777,
+        818,
+        831,
+        846,
+        867,
+        868,
+        875,
+        883,
+        905,
+        924,
+        968,
+        1018,
+        1022,
+        1066,
+        1068,
+        1092,
+        1097,
+        1099,
+        1117,
+        1133,
+        1163,
+        1170,
+        1171,
+        1177,
+        1188,
+        1201,
+        1205,
+        1229,
+        1250,
+        1257,
+        1263,
+        1279,
+        1303,
+        1312
+      ]
+    },
+    "new_model_summary": {
+      "gsm8k thinking off": {
+        "n": 100,
+        "correct": 96,
+        "unparsed": 0,
+        "length_cut": 0,
+        "errors": 0,
+        "accuracy_pct": 96
+      },
+      "mmlu thinking off": {
+        "n": 200,
+        "correct": 171,
+        "unparsed": 0,
+        "length_cut": 0,
+        "errors": 0,
+        "accuracy_pct": 85.5
+      }
+    },
+    "same_subset_comparison": {
+      "gsm8k thinking off": {
+        "old": {
+          "n": 100,
+          "correct": 97,
+          "unparsed": 0,
+          "length_cut": 0,
+          "errors": 0,
+          "accuracy_pct": 97
+        },
+        "new": {
+          "n": 100,
+          "correct": 96,
+          "unparsed": 0,
+          "length_cut": 0,
+          "errors": 0,
+          "accuracy_pct": 96
+        },
+        "accuracy_delta_pp": -1
+      },
+      "mmlu thinking off": {
+        "old": {
+          "n": 200,
+          "correct": 175,
+          "unparsed": 0,
+          "length_cut": 0,
+          "errors": 0,
+          "accuracy_pct": 87.5
+        },
+        "new": {
+          "n": 200,
+          "correct": 171,
+          "unparsed": 0,
+          "length_cut": 0,
+          "errors": 0,
+          "accuracy_pct": 85.5
+        },
+        "accuracy_delta_pp": -2
+      }
+    },
+    "dataset_file_hashes": {
+      "mmlu_all_test.jsonl": "30225733916644b79828ee2e3961d8905e001761b0b2cce06fc3da1c2af336d7",
+      "gsm8k_test.jsonl": "3730d312f6e3440559ace48831e51066acaca737f6eabec99bccb9e4b3c39d14"
+    },
+    "limits": [
+      "Small fixed subsets; not full MMLU/GSM8K or a standard evaluation harness.",
+      "Scores compare two quantized checkpoint versions; not an unquantized reference or a causal kernel-accuracy experiment.",
+      "No API, parse, or truncation failures in these saved runs; lower scores are ordinary answer differences."
+    ]
+  },
+  "sources": {
+    "experiments/09-h200-1017/h200_env.sh": {
+      "relative_source": "experiments/09-h200-1017/h200_env.sh",
+      "sha256": "4985a80db90376041816401a0f884a41f0b68a397e9c6d30d8d697553f963769"
+    },
+    "experiments/09-h200-1017/serve_h200.sh": {
+      "relative_source": "experiments/09-h200-1017/serve_h200.sh",
+      "sha256": "68408a4d46e31ecba806b75669131eceb601786d1919b6f724fb800854cb2165"
+    },
+    "experiments/09-h200-1017/results/download-manifest.json": {
+      "relative_source": "experiments/09-h200-1017/results/download-manifest.json",
+      "sha256": "1d7a71c3df8aa63ba8e21fd1407c5f988bb0ceea7e84b8f6c349223d0e94322e"
+    },
+    "experiments/09-h200-1017/results/decode.json": {
+      "relative_source": "experiments/09-h200-1017/results/decode.json",
+      "sha256": "37c38a24ebb00e62a9eceffad48259cf5a13fd73e1cd40b25684fc75fdfd3344"
+    },
+    "experiments/09-h200-1017/tools/dsv41/kit_bench.py": {
+      "relative_source": "experiments/09-h200-1017/tools/dsv41/kit_bench.py",
+      "sha256": "83a4fbeb987032f906cf00d3f6c9dd2fad47dd675e75dd498c4c4188d63a6c0d"
+    },
+    "experiments/09-h200-1017/results-validation/validation.json": {
+      "relative_source": "experiments/09-h200-1017/results-validation/validation.json",
+      "sha256": "2c558d85e7e1ff202e5736aa23be4433b33899e0bd5e95fca406690ea7428824"
+    },
+    "experiments/09-h200-1017/validate_capacity.py": {
+      "relative_source": "experiments/09-h200-1017/validate_capacity.py",
+      "sha256": "f2ab85c11d82b8300d263959b5d4f729460ece3e3087b82b84940fc3f022a584"
+    },
+    "experiments/09-h200-1017/logs/server-20261017T181029Z-rank0.log": {
+      "relative_source": "experiments/09-h200-1017/logs/server-20261017T181029Z-rank0.log",
+      "sha256": "fad7fc1d9392ce8c5002b4a533d949d347533986c988757c46d7c594e2f07556"
+    },
+    "experiments/09-h200-1017/results/validation-review.json": {
+      "relative_source": "experiments/09-h200-1017/results/validation-review.json",
+      "sha256": "472e6c613ed9b1dee46a0319aa77dbfaf3fd9333803bb8b78f1f435435c3e565"
+    },
+    "experiments/09-h200-1017/results/api-memory.json": {
+      "relative_source": "experiments/09-h200-1017/results/api-memory.json",
+      "sha256": "e0d6f048af8d03d9e0c60b50de038b3514f69d6e8a5e9faf093857f91e03dfde"
+    },
+    "experiments/09-h200-1017/results-capacity/startup-rank0.json": {
+      "relative_source": "experiments/09-h200-1017/results-capacity/startup-rank0.json",
+      "sha256": "75e85bc53f041151955e05ebca0bd759cba1ccb17a9e53d8ef85766e1c5a5f05"
+    },
+    "experiments/09-h200-1017/results-capacity/startup-rank1.json": {
+      "relative_source": "experiments/09-h200-1017/results-capacity/startup-rank1.json",
+      "sha256": "ca060ceee0e24fd4003793b365376fefb98f80eafa5b2151977fdf1254c307f9"
+    },
+    "experiments/09-h200-1017/results-validation/quality.json": {
+      "relative_source": "experiments/09-h200-1017/results-validation/quality.json",
+      "sha256": "61b999720cf17cb194caa36e9177fe77e6d31c3249efef4b0c09fbdd206fdcdf"
+    },
+    "experiments/09-h200-1017/results-validation/summary.json": {
+      "relative_source": "experiments/09-h200-1017/results-validation/summary.json",
+      "sha256": "0e527069e141219c52b4c1ff6a7a5bc25abb8cd7410744399f7db5e08e125aa1"
+    },
+    "experiments/08-h200-capacity/results-capacity/final/quality.json": {
+      "relative_source": "experiments/08-h200-capacity/results-capacity/final/quality.json",
+      "sha256": "22c13b6c9dc7420d48142db9420756ae0d84bcc8b27b57e4601b2fa09afffd2e"
+    },
+    "experiments/09-h200-1017/tools/dsv41/quality_eval.py": {
+      "relative_source": "experiments/09-h200-1017/tools/dsv41/quality_eval.py",
+      "sha256": "a629d9d6ae80e4c309728c31f35cfc7053d88d1878454da7ed4fe633fdfbf29e"
+    }
+  }
+}

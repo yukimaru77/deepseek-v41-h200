@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-17T20:15:33.732030+00:00",
+  "model": "DeepSeek-V4.1-Flash-1017",
+  "scope": "Read-only live TP2 process memory snapshot after the benchmark campaign; not a peak or a minimum RAM requirement",
+  "source": "Linux procfs smaps_rollup for the two live model ranks; selected numeric fields only",
+  "unit": "KiB",
+  "processes": [
+    {"rank": 0, "Rss": 205070428, "Pss": 105716404, "Pss_Anon": 5732280, "Pss_File": 99457528, "Pss_Shmem": 526596, "Shared_Clean": 198705472, "Private_Dirty": 6278288, "Swap": 0},
+    {"rank": 1, "Rss": 202235932, "Pss": 102881935, "Pss_Anon": 2901728, "Pss_File": 99453611, "Pss_Shmem": 526596, "Shared_Clean": 198705408, "Private_Dirty": 3451852, "Swap": 0}
+  ],
+  "combined_pss_kib": 208598339,
+  "shared_engram_file_bytes": 203073077576,
+  "engram_file_count": 2,
+  "host_memtotal_kib": 1188539228,
+  "cpu_model": "AMD EPYC 9115 16-Core Processor",
+  "cpu_logical_threads": 32,
+  "python": "3.12.3",
+  "pytorch": "2.11.0+cu130",
+  "torch_cuda": "13.0",
+  "limitations": [
+    "RSS includes the same file-backed Engram pages in both ranks; do not sum RSS as unique RAM consumption.",
+    "Combined PSS is a point-in-time proportional resident footprint, not total machine RAM usage or peak demand.",
+    "Prefault does not mlock the mapped Engram file pages; memory pressure can change residency.",
+    "No minimum-RAM, disk-cold startup, or memory-pressure experiment was performed."
+  ]
+}

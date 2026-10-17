@@ -1,0 +1,32 @@
+{
+  "date": "2026-10-18 JST",
+  "cpu_tests": {
+    "passed": 117,
+    "skipped": 1,
+    "subtests_passed": 19
+  },
+  "docker_build": {
+    "passed": true,
+    "base_manifest": "sha256:16aba8925507e631e1dc1e23d95d026533602591775f6a8db68b74ee99746155",
+    "built_image_id": "sha256:238eaf62b35e3a7c780e7ea5e3f69c5ca5c3cc315f129a540a4b91c7836853a6"
+  },
+  "built_image_checks": [
+    "CLI help",
+    "official encoder import",
+    "offline model plan",
+    "NCCL 2.28.9 resolution",
+    "missing-model refusal before rank launch",
+    "benchmark helper imports and help"
+  ],
+  "packaging_full_gpu_cold_start": false,
+  "existing_gpu_service_restarted": false,
+  "scope": "GPU benchmark measurements are historical deployment evidence; packaging checks were run without GPU access.",
+  "fixture_reproduction": {
+    "built_image_execution": true,
+    "tokenization_only": true,
+    "generated_tokens": 0,
+    "raw_tokens": 1046916,
+    "sha256": "bde79cc15b8d7f07802fb84ed6e3cd0753e9be9d4d0fd94a25eff3eb79c82fae",
+    "matches_recorded_campaign": true
+  }
+}
