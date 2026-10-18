@@ -10,6 +10,12 @@ if [[ $# != 1 || ( "$1" != 0 && "$1" != 1 ) ]]; then
 fi
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 rank=$1
+vision_args=()
+case "$H200_VISION" in
+  1) vision_args=(--vision) ;;
+  0) ;;
+  *) printf '%s\n' 'H200_VISION must be 0 or 1.' >&2; exit 2 ;;
+esac
 # Docker exposes exactly the selected two host GPUs; CUDA numbers them 0 and 1.
 export CUDA_VISIBLE_DEVICES="$rank"
 exec python3 -m tensorfold serve "$MODEL_DIR" \
@@ -17,4 +23,4 @@ exec python3 -m tensorfold serve "$MODEL_DIR" \
   --master 127.0.0.1 --master-port "$H200_MASTER_PORT" \
   --host 127.0.0.1 --port "$H200_API_PORT" \
   --context "$H200_CONTEXT" --parallel "$H200_PARALLEL" \
-  --mtp-drafts "$H200_MTP_DRAFTS" --name "$H200_MODEL_NAME" --no-update-check
+  --mtp-drafts "$H200_MTP_DRAFTS" "${vision_args[@]}" --name "$H200_MODEL_NAME" --no-update-check

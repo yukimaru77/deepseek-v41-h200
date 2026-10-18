@@ -43,7 +43,7 @@ DATA_DIR=/srv/deepseek-h200 H200_GPU_IDS=2,3 \
 
 Both ranks use the same revisions, cache paths and settings. The container exposes only the two selected GPUs; the processes address them as local devices 0 and 1. The API binds to `127.0.0.1`. Port conflicts are not resolved by killing another process.
 
-The default configuration matches the recorded 1017 deployment:
+The default configuration retains the recorded 1017 context and concurrency settings and enables the checkpoint's image tower:
 
 | Setting | Value |
 |---|---:|
@@ -56,10 +56,19 @@ The default configuration matches the recorded 1017 deployment:
 | Retained CUDA graphs | 64 |
 | Retained completed prefixes | Up to 64 entries, up to 10 boundaries each |
 | Decoder prefill | `TF_DS_REPLAY=1`, bounded replay |
+| Image input | Enabled; rank 0 holds the vision tower, largest image grid warmed at startup |
 
 Paths under `DATA_DIR`: `models/`, revision-specific `cache/`, and `results/capacity/`. Engram is read-only mmap plus prefault; it is backed by shared host file pages. The two process RSS values double-count shared pages, so use PSS for combined process residency.
 
 The environment settings are in [env.sh](env.sh). These are measured settings, not an automatic optimizer. In particular, `TF_DS_CAPACITY_GRAPH_STRESS=1` exercises the exact 63-slot/64-graph shape. Changing dimensions requires deliberate memory sizing and adjusting or disabling that specific stress check. Do not interpret a maximum-shape check as 63 fully populated 1M contexts.
+
+## Image input
+
+The pinned EXL3 checkpoint includes the BF16 vision tower and aligner, image delimiter embeddings, and image-routing biases. No additional model download is needed. `H200_VISION=1` passes `--vision` on both ranks; set `H200_VISION=0` to reproduce the original text-only deployment. The earlier decode and long-context results were collected with vision disabled.
+
+Send image bytes as base64: OpenAI Chat Completions uses an `image_url` content block containing a `data:image/png;base64,...` URL; Anthropic Messages uses an `image` block with a base64 `source`. Images inside tool results are supported, including screenshots returned by an agent's image-reading tool. HTTPS image fetching remains disabled by default.
+
+The default API limit is four images across the entire request history. Each image is resized to the model's visual-token budget. DeepSeek Harness must also declare `input: [text, image]` for this model, as in [harness.patch.yml](harness.patch.yml); a text-only declaration prevents `read_image` from sending the request.
 
 ## Use and measure
 

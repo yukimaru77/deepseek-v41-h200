@@ -20,7 +20,7 @@
             name: DeepSeek V4.1 Flash 1017 · H200
             contextWindow: 1048576
             maxTokens: 32768
-            input: [text]
+            input: [text, image]
             reasoningEfforts:
               'off':
               low: low

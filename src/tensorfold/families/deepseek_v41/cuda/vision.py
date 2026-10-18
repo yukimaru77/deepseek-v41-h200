@@ -1,3 +1,4 @@
+# Modified for the H200 variant (2026); see docs/H200-ATTRIBUTION.md.
 """DeepSeek-V4.1's image input: preprocessing, the ViT and the aligner on rank 0, and the image spans of a prompt.
 
 Re-implemented from reading DeepSeek's MIT reference (``inference/vision.py``, ``inference/image_processor.py`` and the
@@ -109,12 +110,19 @@ class Picture:
 
 
 def decode(data: bytes, cfg: VisionConfig, max_pixels: int = 64 << 20) -> Picture:
-    import numpy as np
-    from PIL import Image, ImageOps
+    from PIL import Image
 
     Image.MAX_IMAGE_PIXELS = max_pixels
     with Image.open(io.BytesIO(data)) as source:
         image = source.convert("RGB")
+    return _preprocess(image, cfg)
+
+
+def _preprocess(image, cfg: VisionConfig) -> Picture:
+    """Patch an RGB PIL image; HTTP inputs have already been oriented and decoded safely."""
+    import numpy as np
+    from PIL import ImageOps
+
     n_llm_h, n_llm_w, best_h, best_w = plan_grid(image.width, image.height, cfg)
     p = cfg.patch
     n_vit_h, n_vit_w = best_h // p, best_w // p
@@ -142,6 +150,12 @@ class VisionPrompt:
 
     def positions(self) -> list[int]:
         return [s + i for s, pic in self.spans for i in range(pic.tokens)]
+
+
+@dataclass(frozen=True)
+class _RenderedImages:
+    text: str
+    image_order: tuple[int, ...]
 
 
 # -- the tower (DeepSeek's vision.py) ---------------------------------------------------------------------------------
@@ -286,6 +300,69 @@ class DsVision:
                  max_bytes: int = 20 << 20):
         self.cfg, self.allow_urls, self.max_images, self.max_bytes = cfg, allow_urls, max_images, max_bytes
         self.videos = False
+        self.tokenizer = None
+
+    def bind_tokenizer(self, tokenizer) -> None:
+        """Use the server's tokenizer, checking that a placeholder is exactly one configured token."""
+        if tokenizer.encode(PLACEHOLDER, add_special_tokens=False).ids != [self.cfg.image_token_id]:
+            raise ValueError("the tokenizer image placeholder does not match the DeepSeek vision configuration")
+        self.tokenizer = tokenizer
+
+    @staticmethod
+    def render_images(messages, render) -> _RenderedImages:
+        """Give the 1017 encoder image sources and retain its final tool-result image order.
+
+        The shared loader has replaced URLs with source-less image markers. Internal indices restore the
+        encoder's required source field without fetching anything again or retaining caller URLs. The reference
+        sorts parallel tool results, so collecting images before that sort would attach the wrong pixels.
+        """
+        from copy import deepcopy
+        from ..vendor.encoding import merge_tool_messages, process_image_messages, sort_tool_results_by_call_order
+
+        messages = deepcopy(messages)
+        count = 0
+        for message in messages:
+            if isinstance(message.get("content"), list):
+                for part in message["content"]:
+                    if part.get("type") == "image":
+                        part["source"] = {"tensorfold_image_index": count}
+                        count += 1
+        ordered = sort_tool_results_by_call_order(merge_tool_messages(messages))
+        _, records = process_image_messages(ordered)
+        order = tuple(record["source"]["tensorfold_image_index"] for record in records)
+        if sorted(order) != list(range(count)):
+            raise ValueError("the rendered prompt must retain every image exactly once")
+        return _RenderedImages(render(messages), order)
+
+    def prepare(self, rendered_prompt: str | _RenderedImages, images, *, max_visual_tokens: int = 4096,
+                max_prompt_tokens: int | None = None) -> VisionPrompt:
+        """Expand the shared loader's oriented RGB inputs into model image-token spans on the CPU."""
+        from tensorfold.server.errors import CONTEXT_LIMIT
+
+        if self.tokenizer is None:
+            raise ValueError("DeepSeek image preprocessing requires the server tokenizer")
+        if not images or max_visual_tokens < 1:
+            raise ValueError("DeepSeek image preprocessing needs images and a positive visual-token budget")
+        if isinstance(rendered_prompt, _RenderedImages):
+            if sorted(rendered_prompt.image_order) != list(range(len(images))):
+                raise ValueError("the rendered prompt must retain every image exactly once")
+            images = [images[i] for i in rendered_prompt.image_order]
+            rendered_prompt = rendered_prompt.text
+        if rendered_prompt.count(PLACEHOLDER) != len(images):
+            raise ValueError("the rendered prompt must contain exactly one placeholder per image")
+        ids = self.tokenizer.encode(rendered_prompt, add_special_tokens=False).ids
+        if ids.count(self.cfg.image_token_id) != len(images):
+            raise ValueError("the rendered prompt does not hold one placeholder token per image")
+        # Check both budgets before allocating patch tensors; image delimiters are part of the visual budget.
+        counts = [num_image_tokens(*plan_grid(image.width, image.height, self.cfg)[:2]) for image in images]
+        visual_tokens = sum(counts)
+        if visual_tokens > max_visual_tokens:
+            raise ValueError("processed images exceed the visual-token budget; reduce image resolution or count")
+        total = len(ids) - len(images) + visual_tokens
+        if max_prompt_tokens is not None and total > max_prompt_tokens:
+            raise ValueError(f"{CONTEXT_LIMIT} {max_prompt_tokens} tokens: the expanded image prompt has "
+                             f"{total} tokens; reduce image resolution or prompt length")
+        return self.expand(ids, [_preprocess(image.to_pil(), self.cfg) for image in images])
 
     @staticmethod
     def has_images(messages) -> bool:

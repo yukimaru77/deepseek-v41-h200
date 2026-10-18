@@ -59,3 +59,9 @@ Use `http://127.0.0.1:18891/v1` as the base URL and the same model ID. To enable
 ```
 
 Keep assistant `reasoning_content` when replaying tool calls. For non-thinking requests, set `enable_thinking` to false. The server's output cap and per-request context are separate limits; clients should budget input and output within the total 1048576-token context.
+
+## Images and screenshots
+
+Start the server with vision enabled (the H200 launcher's default). In DeepSeek Harness, the model's `input` list must include both `text` and `image`; the example patch includes this declaration. Otherwise `read_image` rejects the selected model before sending an API request. Changing the client declaration alone does not enable the server's vision tower.
+
+Both user images and images returned in tool results use the model's native vision path. Send base64 image content, not the client's local filesystem path, to the API. The default limit is four images across the full request history; remove earlier image content or begin a new conversation when that limit is reached.

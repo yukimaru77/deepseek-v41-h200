@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-18 JST",
+  "model": "DeepSeek-V4.1-Flash-1017-H200",
+  "vision_enabled": true,
+  "context_tokens": 1048576,
+  "parallel_slots": 63,
+  "shared_kv_tokens": 37822464,
+  "cpu_tests": {"passed": 272, "skipped": 7},
+  "docker_build": {
+    "passed": true,
+    "image_id": "sha256:77e34c4300680dac3806bfcd04ef802bc95675c4b330d146f9f215dcbd3f0c2f",
+    "pillow": "12.3.0",
+    "adapter_import_passed": true
+  },
+  "live_api_checks": [
+    {"protocol": "anthropic-messages", "image_location": "user", "status": 200,
+     "client_total_seconds": 2.113, "output_tokens": 180, "stop_reason": "end_turn"},
+    {"protocol": "anthropic-messages", "image_location": "tool_result", "status": 200,
+     "client_total_seconds": 2.227, "output_tokens": 200, "stop_reason": "max_tokens"},
+    {"protocol": "openai-chat-completions", "image_location": "user", "status": 200,
+     "client_total_seconds": 1.608, "output_tokens": 180, "stop_reason": "stop"}
+  ],
+  "image_check": {
+    "image_tokens": 596,
+    "human_review_of_main_object_and_colors": "passed",
+    "input_image_and_response_texts_included": false,
+    "scope": "One screenshot, three request formats, one run each. Functional checks, not a vision quality benchmark or repeated latency benchmark."
+  },
+  "deepseek_harness": {
+    "web_model_input_modalities": ["text", "image"],
+    "web_live_settings_verified": true,
+    "web_restart_required": false,
+    "headless_end_to_end_exit_code": 0,
+    "headless_elapsed_seconds": 22.833,
+    "read_image_calls": 1,
+    "read_image_status": "completed",
+    "image_description_review": "passed",
+    "image_contents_disclosed_in_prompt": false
+  },
+  "capacity_preflight": {
+    "both_ranks_passed": true,
+    "rank0_device_free_after_checks_bytes": 1777860608,
+    "rank1_device_free_after_checks_bytes": 2847408128,
+    "rank0_device_free_with_extra_1gib_workspace_bytes": 702021632,
+    "rank1_device_free_with_extra_1gib_workspace_bytes": 1771569152,
+    "full_1m_multi_session_workload_repeated": false
+  },
+  "deployment": {
+    "existing_service_restarted_with_vision": true,
+    "gpu_source": "Three image-adapter files from this repository deployed to the existing service.",
+    "portable_image_gpu_cold_start": false
+  }
+}

@@ -14,8 +14,11 @@ The following files were modified or added relative to the pinned Python base. P
 | `cuda/exl3/experts_grouped.cuh` | Explicit multiplication rounding in fused gate/up arithmetic, checked against the existing expert paths. |
 | `cuda/chat_template.py` | DeepSeek V4.1-1017 fallback chat template using the official encoder. |
 | `cuda/http.py` | Query-aware models routing for Messages clients. The Messages protocol implementation itself is inherited. |
+| `cuda/server.py` | Connect the DeepSeek image frontend to the server tokenizer and bounded image loader. |
 | `cuda/health.py` | Serving health/compatibility reporting. |
 | `families/deepseek_v41/cuda/engine.py` | H200 serving and capacity integration. |
+| `families/deepseek_v41/cuda/app.py` | Route 1017 images through the shared preparation path instead of injecting raw placeholder text. |
+| `families/deepseek_v41/cuda/vision.py` | Adapt oriented RGB inputs to the inherited vision tower and preserve the official encoder's tool-result image order. |
 | `families/deepseek_v41/cuda/engram_io.cpp` | Read-only host page-cache mapping and Engram row gathering. |
 | `families/deepseek_v41/cuda/model.py` | H200 model/Engram integration. |
 | `families/deepseek_v41/cuda/multi.py` | Shared KV capacity, admission, warmup, bounded snapshots and optional CPU snapshot storage. |

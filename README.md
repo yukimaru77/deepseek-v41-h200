@@ -1,6 +1,6 @@
 # DeepSeek V4.1 Flash 1017 on 2 × H200
 
-DeepSeek-V4.1-Flash-1017を **H200 NVL 2枚**で動かす、TensorFoldベースの推論実装です。H200向けCUDAカーネル、CPU RAM上のEngram、1Mコンテキスト、共有KVキャッシュ、起動手順と実測結果を含みます。
+DeepSeek-V4.1-Flash-1017を **H200 NVL 2枚**で動かす、TensorFoldベースの推論実装です。H200向けCUDAカーネル、CPU RAM上のEngram、画像入力、1Mコンテキスト、共有KVキャッシュ、起動手順と実測結果を含みます。
 
 Based on [TensorFold](https://github.com/bertholomus/TensorFold/tree/8e0966e2b09250abe2f6d9cc51edc20630e6eb1a), pinned at `8e0966e2b09250abe2f6d9cc51edc20630e6eb1a`. Includes patched source, deployment scripts, and measurements for two H200 GPUs. This is an independent derivative, not an official DeepSeek or NVIDIA release. Original documentation: [README.upstream.md](README.upstream.md).
 
@@ -88,6 +88,8 @@ curl http://127.0.0.1:18891/v1/messages \
 ```
 
 DeepSeek Harness / Claude Codeでthinkingと通常のツール往復を確認しています。[クライアント設定例](h200/CLIENTS.md)。Anthropicの全機能への互換性を意味せず、強制tool_choiceのany / named、tool search、暗号化thinkingなどは未対応です。
+
+画像入力は起動時の `--vision` と、クライアント側の `input: [text, image]` 宣言で有効になります。現在のH200起動スクリプトは両方に対応しています。元の重みに画像認識用の重みも含まれており、別モデルの取得は不要です。ユーザー画像とツール結果内のスクリーンショットをbase64で送れます。[画像入力の設定](h200/README.md#image-input)。上記の初回公開時の速度計測は画像機能を無効にした構成の結果です。
 
 ## 品質と適用範囲
 

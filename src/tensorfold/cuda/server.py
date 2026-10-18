@@ -1,3 +1,4 @@
+# Modified for the H200 variant (2026); see docs/H200-ATTRIBUTION.md.
 """OpenAI server for the CUDA engines: a family's ``cuda_engine`` gives ``eos``, ``generate`` and ``follow``."""
 from __future__ import annotations
 
@@ -92,6 +93,8 @@ class App:
         self.background_ids = frozenset(background_ids)   # --name-priority ID=background: a default for this id
         self.model_dir = Path(model_dir)
         self.tok = Tokenizer.from_file(str(model_dir / "tokenizer.json"))
+        if self.vision is not None and hasattr(self.vision, "bind_tokenizer"):
+            self.vision.bind_tokenizer(self.tok)
         self.template = ChatTemplate(model_dir)
         self.default_thinking = default_thinking
         self.reasoning_effort, self.thinking_budget = reasoning_effort, int(thinking_budget)   # the Mac's defaults
@@ -275,8 +278,14 @@ class App:
                     raise RequestError(f"the chat template rejected the request: {exc}") from exc
 
             if has_images(body["messages"]):
+                def render_images(messages):
+                    draw = lambda items: render(items, allow_images=True)
+                    if hasattr(self.vision, "render_images"):
+                        return self.vision.render_images(messages, draw)
+                    return draw(messages)
+
                 rendered = prepare_images(self.vision, body["messages"],
-                                          lambda messages: render(messages, allow_images=True),
+                                          render_images,
                                           context_limit=self._context_limit(),
                                           limits=getattr(self, "image_limits", DEFAULT_LIMITS))
                 return PreparedRequest(rendered.tokens, max_tokens, tools, thinking,

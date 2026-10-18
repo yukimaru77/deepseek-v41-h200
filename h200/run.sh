@@ -14,6 +14,7 @@ Environment:
   H200_GPU_IDS      two host GPU indices (default: 0,1)
   H200_API_PORT     loopback API port (default: 18891)
   H200_MASTER_PORT  local rank rendezvous port (default: 29571)
+  H200_VISION       enable image input (default: 1; 0 for text-only)
 
 Defaults: 1,048,576 tokens/request, 37,822,464 shared KV tokens, 63 slots.
 The engine is loopback-only. Use a separately authenticated reverse proxy for
@@ -42,12 +43,12 @@ if [[ $inside == 0 ]]; then
   args=(run --rm --init --gpus "\"device=$gpu_ids\"" --ipc=host --network=host
         --ulimit memlock=-1 --volume "$data_dir:/data" --env DATA_DIR=/data)
   # Forward only documented tuning settings, never the host's complete environment.
-  for name in H200_CONTEXT H200_PARALLEL H200_MTP_DRAFTS H200_API_PORT H200_MASTER_PORT H200_MODEL_NAME \
+  for name in H200_CONTEXT H200_PARALLEL H200_MTP_DRAFTS H200_VISION H200_API_PORT H200_MASTER_PORT H200_MODEL_NAME \
       TF_EXL3_DECODE OMP_NUM_THREADS MKL_NUM_THREADS MAX_JOBS TF_DS_RANK_CACHE_READERS \
       TF_DS_ENGRAM_MMAP TF_DS_ENGRAM_PREFAULT TF_DS_PREFILL_CHUNK TF_DS_WARM_LENGTHS \
       TF_DS_REPLAY TF_DS_CHUNK_LOG TF_DS_POOL_TOKENS TF_DS_DECODE_ROWS TF_DS_PARALLEL_DEPTH \
       TF_DS_KEEP_ENTRIES TF_DS_KEEP_MARKS TF_DS_SNAPSHOT_CPU TF_DS_WARM_ROWS \
-      TF_DS_CAPACITY_CHECK TF_DS_ROUND_GRAPH_LIMIT TF_DS_CAPACITY_GRAPH_STRESS; do
+      TF_DS_CAPACITY_CHECK TF_DS_ROUND_GRAPH_LIMIT TF_DS_CAPACITY_GRAPH_STRESS TF_DS_VISION_WARM; do
     if [[ -n ${!name:-} ]]; then args+=(--env "$name"); fi
   done
   exec docker "${args[@]}" "$image"

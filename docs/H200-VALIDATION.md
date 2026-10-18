@@ -1,6 +1,6 @@
 # Publication validation
 
-Validation date: 2026-10-18 JST. The original running two-H200 model was left running throughout preparation of this repository.
+Validation date: 2026-10-18 JST. The original running two-H200 model was left running throughout initial publication. The subsequent image-input fix did restart the service; its validation is recorded separately below.
 
 ## Source and protocol checks
 
@@ -42,3 +42,15 @@ docker run --rm --network none -v "$PWD:/app:ro" -w /app \
 ```
 
 No GPU devices or model weights are needed for this command. The included upstream tests for other model families were not comprehensively requalified by this H200 port.
+
+## Image-input follow-up
+
+The deployed weights already contained the vision tower, but the original launch command omitted `--vision` and the DSH model declared only text input. Enabling vision exposed an incompatibility between the older image-placeholder path and the 1017 official encoder. The fix connects `DsVision` to the shared image loader and tokenizer, preserves image order when the official encoder reorders parallel tool results, and removes the obsolete family-specific preparation override. The official encoder itself is unchanged.
+
+The focused CPU suite passed **272 tests, with 7 skipped**: `test_dsv41_vision_adapter.py`, `test_dsv41_1017_chat.py`, `test_vision_tool_results.py`, `test_vision_server.py`, `test_vision_images.py`, `test_vision_limits.py`, `test_cuda_thinking_controls.py`, and `test_h200_model_listing.py`. It checks the official encoder's token sequence, image/pixel ordering, EXIF orientation, expanded context and visual-token budgets, and text-only behavior. The updated Docker image built successfully and imported Pillow 12.3.0 and the adapter without GPU access.
+
+After deployment, a screenshot was recognized through OpenAI user-image, Anthropic user-image, and Anthropic tool-result-image requests. All returned HTTP 200; the 200-token cap truncated the tool-result description, while the other two stopped normally. These are functional checks of one image, not a broad vision quality evaluation. The image and its descriptions are not distributed. See [vision-validation.json](../benchmarks/h200/vision-validation.json) for the sanitized results.
+
+DeepSeek Harness's live web settings were verified to declare `input: [text, image]`. A separate headless session then invoked `read_image` once, completed the tool successfully, and described the image's main object and colors without image-content hints in the prompt (exit 0, 22.833 seconds for the entire session). The web service did not need a restart.
+
+Both ranks passed the existing capacity preflight with vision enabled, retaining 1,048,576 tokens per request, 63 active slots, and 37,822,464 shared KV slots. The rank-0 free memory after checks was about 1.66 GiB; with an additional 1 GiB workspace held, about 0.65 GiB remained. The earlier full near-1M workload and decode benchmark were not repeated. The portable image was rebuilt, while live GPU checks used the updated source in the existing deployment container.
