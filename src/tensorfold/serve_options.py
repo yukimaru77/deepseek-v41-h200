@@ -1,3 +1,4 @@
+# Modified for the H200 variant (2026); see docs/H200-ATTRIBUTION.md.
 """Serve options a backend or family has no path for, refused before any weight is downloaded."""
 
 from __future__ import annotations
@@ -38,18 +39,26 @@ def check(args: argparse.Namespace, family: Any, backend: str, config_dir: Any =
         raise ValueError("--vision-urls needs --vision")
     images = getattr(args, "vision_max_images", None)
     if images is not None:
-        if not isinstance(images, int) or isinstance(images, bool) or images < 1:
-            raise ValueError("--vision-max-images must be a positive integer")
+        if not isinstance(images, int) or isinstance(images, bool) or images < 0:
+            raise ValueError("--vision-max-images must be a nonnegative integer (0: no image-count limit)")
         if not getattr(args, "vision", False):
             raise ValueError("--vision-max-images needs --vision")
     tokens = getattr(args, "vision_image_tokens", None)
     if tokens is not None:
-        if not isinstance(tokens, int) or isinstance(tokens, bool) or not 1 <= tokens <= 65536:
+        deepseek = backend == "cuda" and family.model_type == "deepseek_v41"
+        if deepseek and (not isinstance(tokens, int) or isinstance(tokens, bool) or tokens < 1):
+            raise ValueError("--vision-image-tokens must be a positive integer")
+        if not deepseek and (not isinstance(tokens, int) or isinstance(tokens, bool) or not 1 <= tokens <= 65536):
             raise ValueError("--vision-image-tokens is a number of tokens from 1 to 65,536")
+        context = getattr(args, "context", None)
+        if deepseek and isinstance(context, int) and context > 0 and tokens > context:
+            raise ValueError(f"--vision-image-tokens must not exceed --context {context}; image tokens share "
+                             "the prompt-plus-reply window")
         if not getattr(args, "vision", False):
             raise ValueError("--vision-image-tokens needs --vision")
         if backend != "cuda":
-            raise ValueError("--vision-image-tokens sets the CUDA Qwen image budget; the MLX towers size their "
+            raise ValueError("--vision-image-tokens sets the CUDA Qwen image budget or DeepSeek image budget; "
+                             "the MLX towers size their "
                              "workspace for 4,096 visual tokens")
     if getattr(args, "vision_offload", False):
         if not getattr(args, "vision", False):

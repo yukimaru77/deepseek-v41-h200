@@ -169,3 +169,52 @@ def test_chunk_metadata_is_bounded(wire):
     with pytest.raises(RequestError):
         read_body(request)
     assert request.close_connection
+
+
+def _body_reader_at_startup():
+    import runpy
+    from tensorfold.server import request_body
+
+    # Load a fresh module namespace without changing handlers already imported by other tests.
+    return runpy.run_path(request_body.__file__)["read_body"]
+
+
+def test_body_limit_default_remains_32_mib(monkeypatch):
+    from tensorfold.server.errors import RequestError
+
+    monkeypatch.delenv("TF_REQUEST_BODY_LIMIT_BYTES", raising=False)
+    read_body = _body_reader_at_startup()
+    request = handler([("Content-Length", str(32 * 1024**2 + 1))], b"")
+    with pytest.raises(RequestError, match="32 MiB limit"):
+        read_body(request)
+    assert request.close_connection
+
+
+@pytest.mark.parametrize("framing", ["fixed", "chunked"])
+def test_body_limit_environment_applies_to_exact_and_exceeded_boundaries(monkeypatch, framing):
+    from tensorfold.server.errors import RequestError
+
+    monkeypatch.setenv("TF_REQUEST_BODY_LIMIT_BYTES", "8")
+    read_body = _body_reader_at_startup()
+    for size in (8, 9):
+        payload = b"x" * size
+        if framing == "fixed":
+            request = handler([("Content-Length", str(size))], payload + b"next request")
+        else:
+            request = handler([("Transfer-Encoding", "chunked")],
+                              f"{size:x}\r\n".encode() + payload + b"\r\n0\r\n\r\nnext request")
+        if size == 8:
+            assert read_body(request) == payload
+            assert request.rfile.read() == b"next request"
+            assert not request.close_connection
+        else:
+            with pytest.raises(RequestError, match="request body exceeds"):
+                read_body(request)
+            assert request.close_connection
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "", "1.5", "unlimited"])
+def test_invalid_body_limit_fails_at_startup(monkeypatch, value):
+    monkeypatch.setenv("TF_REQUEST_BODY_LIMIT_BYTES", value)
+    with pytest.raises(ValueError, match="TF_REQUEST_BODY_LIMIT_BYTES must be a positive integer"):
+        _body_reader_at_startup()

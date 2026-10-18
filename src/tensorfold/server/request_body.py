@@ -1,13 +1,26 @@
+# Modified for the H200 variant (2026); see docs/H200-ATTRIBUTION.md.
 """Bounded HTTP/1.1 request framing, shared by the CUDA and MLX handlers."""
 
 from __future__ import annotations
 
+import os
 import re
 from typing import Any
 
 from tensorfold.server.errors import RequestError
 
-LIMIT = 32 * 1024**2
+
+def _body_limit() -> int:
+    try:
+        value = int(os.environ.get("TF_REQUEST_BODY_LIMIT_BYTES", 32 * 1024**2))
+        if value <= 0:
+            raise ValueError
+    except ValueError:
+        raise ValueError("TF_REQUEST_BODY_LIMIT_BYTES must be a positive integer") from None
+    return value
+
+
+LIMIT = _body_limit()  # read once at server startup; includes JSON and base64 image expansion
 _METADATA_LIMIT = 65536
 
 

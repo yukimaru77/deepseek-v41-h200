@@ -78,3 +78,29 @@ def test_a_cuda_request_carries_the_servers_budget_to_the_frontend():
     app.image_limits = ImageLimits(max_images=8, max_visual_tokens=16384)
     prepared = app.prepare({"messages": image_messages() * 5, "max_tokens": 2}, True)
     assert len(prepared.vision.image_hashes) == 5 and front.budget == {"max_visual_tokens": 16384}
+
+
+@pytest.mark.parametrize("context", [None, 0, 1048576])
+def test_deepseek_accepts_a_visual_budget_up_to_its_context(context):
+    family = NS(model_type="deepseek_v41", package=NS(CUDA_VISION=True))
+    serve_options.check(_args(vision_image_tokens=1048576, context=context), family, "cuda")
+
+
+@pytest.mark.parametrize("tokens", [0, -1, True])
+def test_deepseek_still_requires_a_positive_visual_budget(tokens):
+    family = NS(model_type="deepseek_v41", package=NS(CUDA_VISION=True))
+    with pytest.raises(ValueError, match="positive integer"):
+        serve_options.check(_args(vision_image_tokens=tokens), family, "cuda")
+
+
+def test_deepseek_visual_budget_cannot_exceed_an_explicit_context():
+    family = NS(model_type="deepseek_v41", package=NS(CUDA_VISION=True))
+    with pytest.raises(ValueError, match="must not exceed --context 1048576"):
+        serve_options.check(_args(vision_image_tokens=1048577, context=1048576), family, "cuda")
+
+
+@pytest.mark.parametrize("images", [0, 65])
+def test_deepseek_count_zero_and_positive_counts_pass_option_validation(images):
+    args = _args(vision_image_tokens=1048576, context=1048576)
+    args.vision_max_images = images
+    serve_options.check(args, NS(model_type="deepseek_v41", package=NS(CUDA_VISION=True)), "cuda")

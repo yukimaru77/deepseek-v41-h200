@@ -18,7 +18,7 @@ from tests.test_server_openai_compat import FakeApp, post_json
 from tests.test_vision_server import Frontend, cuda_app, image_messages, prompt_app
 
 
-@pytest.mark.parametrize("limit", [None, 8])
+@pytest.mark.parametrize("limit", [None, 8, 0])
 def test_mlx_app_count_reaches_request_preparation(limit, monkeypatch):
     from tensorfold.server.app import ChatApp
     from tensorfold.server.scheduler import Scheduler
@@ -28,11 +28,12 @@ def test_mlx_app_count_reaches_request_preparation(limit, monkeypatch):
     monkeypatch.setattr(Scheduler, "start", lambda self: None)
     app = ChatApp(NS(vision=Frontend()), FakeTokenizer(), served_name="fixture", checkpoint_slots=0,
                   engine_factory=lambda *args, **kwargs: NS(), vision_max_images=limit)
-    accepted = 4 if limit is None else 8
+    accepted = 4 if limit is None else 65 if limit == 0 else 8
     prepared = prepare_prompt(app, image_messages() * accepted, [], False, None, {})
     assert len(prepared.vision.image_hashes) == accepted
-    with pytest.raises(RequestError, match=f"at most {accepted}"):
-        prepare_prompt(app, image_messages() * (accepted + 1), [], False, None, {})
+    if limit != 0:
+        with pytest.raises(RequestError, match=f"at most {accepted}"):
+            prepare_prompt(app, image_messages() * (accepted + 1), [], False, None, {})
 
 
 @pytest.mark.parametrize("backend", ["mlx", "cuda"])
@@ -122,8 +123,8 @@ def test_image_history_refusal_and_recovery_on_the_same_server(backend, stream, 
 
 
 @pytest.mark.parametrize("backend", ["mlx", "cuda"])
-@pytest.mark.parametrize("value, vision, message", [("0", True, "positive integer"),
-                                                   ("-1", True, "positive integer"),
+@pytest.mark.parametrize("value, vision, message", [("-1", True, "nonnegative integer"),
+                                                   ("0", False, "needs --vision"),
                                                    ("8", False, "needs --vision")])
 def test_bad_image_count_options_are_refused_before_checkpoint_reads(backend, value, vision, message, monkeypatch):
     from tensorfold import families
@@ -135,7 +136,8 @@ def test_bad_image_count_options_are_refused_before_checkpoint_reads(backend, va
         serve_options.check(args, NS(model_type="qwen3_5"), backend, "unused")
 
 
-@pytest.mark.parametrize("flag, accepted", [([], 4), (["--vision-max-images", "8"], 8)])
+@pytest.mark.parametrize("flag, accepted", [([], 4), (["--vision-max-images", "8"], 8),
+                                           (["--vision-max-images", "0"], 65)])
 def test_cuda_cli_count_reaches_request_preparation(tmp_path, monkeypatch, flag, accepted):
     from tensorfold.cuda import server
     from tests.test_cuda_admission import model_dir as _model_dir
@@ -151,10 +153,72 @@ def test_cuda_cli_count_reaches_request_preparation(tmp_path, monkeypatch, flag,
         app.template = NS(render=lambda *args, **kwargs: "rendered prompt")
         prepared = app.prepare({"messages": image_messages() * accepted, "max_tokens": 2}, True)
         seen.append(len(prepared.vision.image_hashes))
-        with pytest.raises(RequestError, match=f"at most {accepted}"):
-            app.prepare({"messages": image_messages() * (accepted + 1)}, True)
+        if app.image_limits.max_images:
+            with pytest.raises(RequestError, match=f"at most {accepted}"):
+                app.prepare({"messages": image_messages() * (accepted + 1)}, True)
 
     monkeypatch.setattr(server, "serve", serve)
     args = cli.build_parser().parse_args(["serve", str(folder), "--vision", "--no-drafts", *flag])
     assert cli._serve_cuda(args, family, folder, 32) == 0
     assert seen == [accepted]
+
+
+_IMAGE_BUDGET_ENV = ("TF_VISION_MAX_TOTAL_ENCODED_BYTES", "TF_VISION_MAX_TOTAL_PIXELS")
+
+
+def _budget_app(tmp_path, monkeypatch, **options):
+    from tensorfold.cuda.server import App
+    from tests.test_cuda_admission import model_dir as _model_dir
+
+    folder = _model_dir.__wrapped__(tmp_path)
+    engine = NS(vision=Frontend(), eos=(0,), context_window=32, generate=lambda *a, **k: None)
+    app = App(engine, folder, "image-budget-fixture", **options)
+    app.template = NS(render=lambda *args, **kwargs: "rendered prompt")
+    return app
+
+
+def test_cuda_image_budget_defaults_and_explicit_count_remain_independent(tmp_path, monkeypatch):
+    from tensorfold.vision.images import DEFAULT_LIMITS
+
+    for name in _IMAGE_BUDGET_ENV:
+        monkeypatch.delenv(name, raising=False)
+    app = _budget_app(tmp_path, monkeypatch)
+    assert app.image_limits == DEFAULT_LIMITS
+    monkeypatch.setenv("TF_VISION_MAX_TOTAL_ENCODED_BYTES", str(128 * 1024**2))
+    monkeypatch.setenv("TF_VISION_MAX_TOTAL_PIXELS", str(128 * 1024**2))
+    expanded = _budget_app(tmp_path, monkeypatch, vision_max_images=64, vision_image_tokens=65536)
+    assert expanded.image_limits == ImageLimits(max_images=64, max_visual_tokens=65536,
+                                                max_total_encoded_bytes=128 * 1024**2,
+                                                max_total_pixels=128 * 1024**2)
+    assert app.image_limits == DEFAULT_LIMITS  # an existing server's limits never change
+
+
+@pytest.mark.parametrize("variable", _IMAGE_BUDGET_ENV)
+@pytest.mark.parametrize("value", ["0", "-1", "", "1.5", "unlimited"])
+def test_invalid_cuda_image_budgets_fail_at_startup(tmp_path, monkeypatch, variable, value):
+    from tensorfold.cuda.server import App
+
+    for name in _IMAGE_BUDGET_ENV:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv(variable, value)
+    # Refused before reading model files, with the failing setting named.
+    with pytest.raises(ValueError, match=f"{variable} must be a positive integer"):
+        App(NS(), tmp_path / "no-checkpoint", "test-model")
+
+
+@pytest.mark.parametrize("variable", _IMAGE_BUDGET_ENV)
+def test_cuda_image_budget_environment_reaches_the_shared_loader(tmp_path, monkeypatch, variable):
+    import base64
+
+    for name in _IMAGE_BUDGET_ENV:
+        monkeypatch.delenv(name, raising=False)
+    messages = image_messages() * 2
+    data_url = messages[0]["content"][1]["image_url"]["url"]
+    total = len(base64.b64decode(data_url.split(",", 1)[1])) * 2 if variable.endswith("BYTES") else 8
+    monkeypatch.setenv(variable, str(total))
+    exact = _budget_app(tmp_path, monkeypatch)
+    assert len(exact.prepare({"messages": messages, "max_tokens": 2}, True).vision.image_hashes) == 2
+    monkeypatch.setenv(variable, str(total - 1))
+    too_small = _budget_app(tmp_path, monkeypatch)
+    with pytest.raises(RequestError, match="byte|pixel"):
+        too_small.prepare({"messages": messages, "max_tokens": 2}, True)

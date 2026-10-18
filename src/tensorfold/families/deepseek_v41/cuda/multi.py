@@ -817,8 +817,7 @@ class MultiDecoder:
             if later:
                 rows = None
                 if e.rank == 0:                          # the tower runs only for the spans past the boundary
-                    rows = torch.cat([e.tower.span_rows(pic)[max(0, cut - start):] for start, pic in s.vision.spans
-                                      if start + pic.tokens > cut])
+                    rows = e._vision_rows(s.vision.spans, cut)
                 image = (later, e._share_rows(rows, len(later)))
             s.draft = bool(s.draft) and e.drafter is not None
             snap = None

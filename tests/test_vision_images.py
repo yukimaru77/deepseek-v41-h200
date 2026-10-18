@@ -112,12 +112,25 @@ def test_count_limit_precedes_loading(monkeypatch):
         load_images([ImageSource(data_url())] * 2, limits=limits(max_images=1))
 
 
-@pytest.mark.parametrize("kwargs", [{"max_images": True}, {"max_redirects": False}, {"max_pixels": 1.5},
+@pytest.mark.parametrize("kwargs", [{"max_images": True}, {"max_images": -1}, {"max_images": 0.5},
+                                     {"max_redirects": False}, {"max_pixels": 1.5},
                                      {"timeout_seconds": float("inf")}, {"timeout_seconds": float("nan")},
                                      {"max_encoded_bytes": 0}])
 def test_limit_configuration_requires_finite_positive_values(kwargs):
     with pytest.raises(ValueError):
         ImageLimits(**kwargs)
+
+
+def test_zero_count_limit_accepts_65_images_but_keeps_the_total_pixel_budget():
+    parts = [{"type": "image_url", "image_url": {"url": data_url()}}] * 65
+    unlimited = ImageLimits(max_images=0)
+    template, sources = split_images([{"role": "user", "content": parts}], limits=unlimited)
+    assert len(template[0]["content"]) == len(sources) == 65
+    loaded = load_images(sources, limits=unlimited)
+    assert len(loaded) == 65
+    pixels = sum(image.width * image.height for image in loaded)
+    with pytest.raises(ImageInputError, match="pixel limit"):
+        load_images(sources, limits=ImageLimits(max_images=0, max_total_pixels=pixels - 1))
 
 
 def test_hash_uses_pixels_dimensions_and_ignores_container_and_metadata():

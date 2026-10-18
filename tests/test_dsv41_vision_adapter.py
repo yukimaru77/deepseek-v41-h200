@@ -185,3 +185,21 @@ def test_text_only_and_legacy_continuations_are_unchanged(app):
     prompt = app.vision.expand([10, CONFIG.image_token_id, 11], pictures)
     continued = app.vision.continued(prompt, [*prompt.token_ids, 12])
     assert continued.spans is prompt.spans and continued.token_ids == [*prompt.token_ids, 12]
+
+
+def test_unlimited_image_count_still_enforces_expanded_context(app):
+    app.image_limits = ImageLimits(max_images=0, max_visual_tokens=1048576)
+    messages = [user_message(png())] * 65
+    prepared = app.prepare({"messages": messages, "max_tokens": 8}, True)
+    assert len(prepared.vision.spans) == 65
+    app.context_window = len(prepared.prompt) + 7
+    with pytest.raises(ContextLengthError, match="8 reply tokens"):
+        app.prepare({"messages": messages, "max_tokens": 8}, True)
+
+
+def test_legacy_split_zero_means_no_count_limit():
+    frontend = DsVision(CONFIG, max_images=0)
+    _, pictures = frontend.split([user_message(png())] * 65)
+    assert len(pictures) == 65
+    with pytest.raises(ValueError, match="nonnegative integer"):
+        DsVision(CONFIG, max_images=-1)

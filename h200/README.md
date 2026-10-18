@@ -43,14 +43,14 @@ DATA_DIR=/srv/deepseek-h200 H200_GPU_IDS=2,3 \
 
 Both ranks use the same revisions, cache paths and settings. The container exposes only the two selected GPUs; the processes address them as local devices 0 and 1. The API binds to `127.0.0.1`. Port conflicts are not resolved by killing another process.
 
-The default configuration retains the recorded 1017 context and concurrency settings and enables the checkpoint's image tower:
+The default configuration retains the recorded 1017 per-request context and active-slot limits, enables the checkpoint's image tower, and reduces the shared pool by one full-window extent to provide image workspace:
 
 | Setting | Value |
 |---|---:|
 | Per-request input + output context | 1,048,576 tokens |
-| Shared KV token slots | 37,822,464 |
+| Shared KV token slots | 36,771,840 (35 full-window extents; the earlier text profile used 36) |
 | Active request slots | 63 |
-| Full-window extents that fit in the pool | 36, calculated |
+| Full-window extents that fit in the pool | 35, calculated; not 35 concurrently executed full-1M requests |
 | Prefill chunk | 2,048 tokens |
 | DSpark draft cap | 5; reduced with active row count, disabled at 9+ rows |
 | Retained CUDA graphs | 64 |
@@ -60,15 +60,17 @@ The default configuration retains the recorded 1017 context and concurrency sett
 
 Paths under `DATA_DIR`: `models/`, revision-specific `cache/`, and `results/capacity/`. Engram is read-only mmap plus prefault; it is backed by shared host file pages. The two process RSS values double-count shared pages, so use PSS for combined process residency.
 
-The environment settings are in [env.sh](env.sh). These are measured settings, not an automatic optimizer. In particular, `TF_DS_CAPACITY_GRAPH_STRESS=1` exercises the exact 63-slot/64-graph shape. Changing dimensions requires deliberate memory sizing and adjusting or disabling that specific stress check. Do not interpret a maximum-shape check as 63 fully populated 1M contexts.
+The environment settings are in [env.sh](env.sh). The original text benchmarks used 37,822,464 pool slots (36 extents); those historical results are unchanged. The current 36,771,840-slot pool releases approximately 0.879 GiB per GPU for image workspace. Both ranks passed startup preflight, and a loopback request containing the same screenshot in 65 tool results completed successfully; this did not test 65 distinct images or an image-filled 1M context. See [image-history validation](../benchmarks/h200/image-history-validation.json). `TF_DS_CAPACITY_GRAPH_STRESS=1` exercises the exact 63-slot/64-graph shape. Changing dimensions requires deliberate memory sizing and adjusting or disabling that specific stress check. Do not interpret a maximum-shape check as 63 fully populated 1M contexts.
 
 ## Image input
 
-The pinned EXL3 checkpoint includes the BF16 vision tower and aligner, image delimiter embeddings, and image-routing biases. No additional model download is needed. `H200_VISION=1` passes `--vision` on both ranks; set `H200_VISION=0` to reproduce the original text-only deployment. The earlier decode and long-context results were collected with vision disabled.
+The pinned EXL3 checkpoint includes the BF16 vision tower and aligner, image delimiter embeddings, and image-routing biases. No additional model download is needed. `H200_VISION=1` passes `--vision` on both ranks. The earlier decode and long-context results used `H200_VISION=0` and `TF_DS_POOL_TOKENS=37822464`; both overrides are needed to restore that historical profile.
 
 Send image bytes as base64: OpenAI Chat Completions uses an `image_url` content block containing a `data:image/png;base64,...` URL; Anthropic Messages uses an `image` block with a base64 `source`. Images inside tool results are supported, including screenshots returned by an agent's image-reading tool. HTTPS image fetching remains disabled by default.
 
-The default API limit is four images across the entire request history. Each image is resized to the model's visual-token budget. DeepSeek Harness must also declare `input: [text, image]` for this model, as in [harness.patch.yml](harness.patch.yml); a text-only declaration prevents `read_image` from sending the request.
+The H200 profile has **no fixed image-count limit**, including images in earlier messages and tool results (`H200_VISION_MAX_IMAGES=0`). Visual tokens share the model's 1,048,576-token context with text; `H200_VISION_IMAGE_TOKENS` defaults to `H200_CONTEXT`. Each image is resized to the model's per-image visual-token budget. DeepSeek Harness must also declare `input: [text, image]` for this model, as in [harness.patch.yml](harness.patch.yml); a text-only declaration prevents `read_image` from sending the request.
+
+The profile allows 128 MiB of compressed image data and 128 Mi pixels per request, and a 192 MiB HTTP body to accommodate base64 expansion. Individual-image limits remain 10 MiB and 16 Mi pixels. Removing the count limit does not remove these byte/pixel budgets, the context window, or available CPU/GPU memory limits. A context filled with visual tokens has not been validated. The environment settings are `H200_VISION_MAX_IMAGES`, `H200_VISION_IMAGE_TOKENS`, `TF_VISION_MAX_TOTAL_ENCODED_BYTES`, `TF_VISION_MAX_TOTAL_PIXELS`, and `TF_REQUEST_BODY_LIMIT_BYTES`. A reverse proxy must allow the same 192 MiB request body (for nginx, `client_max_body_size 192m;`).
 
 ## Use and measure
 

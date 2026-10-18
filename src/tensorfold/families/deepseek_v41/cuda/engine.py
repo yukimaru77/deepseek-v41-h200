@@ -261,15 +261,42 @@ class DsEngine:
                   f"GiB", flush=True)
 
     def _share_rows(self, rows: torch.Tensor | None, n: int) -> torch.Tensor:
-        """Rank 0's image-span rows [n, dim] bf16 on every rank."""
+        """Rank 0's image-span rows [n, dim] bf16 on every rank, with bounded exchange scratch.
+
+        A full all-gather kept world*n rows alive through prefill although only rank 0's rows were used. Share
+        chunks instead: rank 0 retains its existing rows, followers allocate exactly n, and no returned slice
+        keeps the discarded ranks' rows alive. Copies and scratch reuse are ordered on the current CUDA stream.
+        """
 
         dim = self.w.cfg.dim
         if self.world == 1:
             return rows
-        send = rows.contiguous() if self.rank == 0 else torch.zeros((n, dim), dtype=torch.bfloat16, device="cuda")
-        recv = torch.empty((self.world * n * dim,), dtype=torch.bfloat16, device="cuda")
-        self.nccl.all_gather(send.view(-1), recv)
-        return recv[:n * dim].view(n, dim)
+        output = rows.contiguous() if self.rank == 0 else torch.empty((n, dim), dtype=torch.bfloat16, device="cuda")
+        chunk = min(n, 2048)
+        recv = torch.empty((self.world * chunk * dim,), dtype=torch.bfloat16, device="cuda")
+        zeros = torch.zeros((chunk * dim,), dtype=torch.bfloat16, device="cuda") if self.rank else None
+        for start in range(0, n, 2048):
+            stop = min(n, start + 2048)
+            size = (stop - start) * dim
+            send = output[start:stop].view(-1) if self.rank == 0 else zeros[:size]
+            self.nccl.all_gather(send, recv[:self.world * size])
+            if self.rank != 0:
+                output[start:stop].copy_(recv[:size].view(stop - start, dim))
+        return output
+
+    def _vision_rows(self, spans, cut: int = 0) -> torch.Tensor:
+        """Encode remaining image spans into one allocation, retaining only one tower result at a time."""
+        n = sum(max(0, start + pic.tokens - max(start, cut)) for start, pic in spans)
+        rows = torch.empty((n, self.w.cfg.dim), dtype=torch.bfloat16, device="cuda")
+        at = 0
+        for start, pic in spans:
+            if start + pic.tokens <= cut:
+                continue
+            part = self.tower.span_rows(pic)[max(0, cut - start):]
+            rows[at:at + part.shape[0]].copy_(part)
+            at += part.shape[0]
+            del part
+        return rows
 
     def _make_draft_graph(self, sc, dc, tok: int, pos: int):
         """A drafter graph bound to one cache pair (a concurrent slot's), captured in the shared graph pool."""
@@ -333,7 +360,7 @@ class DsEngine:
             positions = vision.positions()
             if positions and positions[-1] >= len(prompt):
                 raise ValueError("an image span lies past the prompt")
-            rows = torch.cat([self.tower.span_rows(pic) for _, pic in vision.spans])
+            rows = self._vision_rows(vision.spans)
         seed = (sampling.seed if sampling else 0) & ((1 << 63) - 1)
         header = [max_tokens, int(stop_eos), int(draft), seed, *_f64(sampling.temperature if sampling else 0.0),
                   int(sampling.top_k) if sampling else 0, *_f64(sampling.top_p if sampling else 1.0),

@@ -70,6 +70,27 @@ def _native_context(model_dir: Path) -> int:
     return int(limit) if isinstance(limit, int) and limit > 0 else 0
 
 
+def _image_limits(max_images: int | None, max_visual_tokens: int | None) -> ImageLimits:
+    """Keep the shared defaults unless the deployment explicitly changes an image budget."""
+    overrides = {}
+    for name, field in (("TF_VISION_MAX_TOTAL_ENCODED_BYTES", "max_total_encoded_bytes"),
+                        ("TF_VISION_MAX_TOTAL_PIXELS", "max_total_pixels")):
+        raw = os.environ.get(name)
+        if raw is not None:
+            try:
+                value = int(raw)
+                if value <= 0:
+                    raise ValueError
+            except ValueError:
+                raise ValueError(f"{name} must be a positive integer") from None
+            overrides[field] = value
+    if max_images is not None:
+        overrides["max_images"] = max_images
+    if max_visual_tokens is not None:
+        overrides["max_visual_tokens"] = max_visual_tokens
+    return ImageLimits(**overrides) if overrides else DEFAULT_LIMITS
+
+
 class App:
     """Serve one engine with sampling and reply-length defaults for requests that omit them."""
 
@@ -85,9 +106,7 @@ class App:
 
         self.engine = engine
         self.vision = getattr(engine, "vision", None)
-        self.image_limits = DEFAULT_LIMITS if vision_max_images is None and vision_image_tokens is None else \
-            ImageLimits(**({} if vision_max_images is None else {"max_images": vision_max_images}),
-                        **({} if vision_image_tokens is None else {"max_visual_tokens": vision_image_tokens}))
+        self.image_limits = _image_limits(vision_max_images, vision_image_tokens)
         self.served = served
         self.aliases = tuple(str(alias).strip() for alias in aliases if str(alias).strip())
         self.background_ids = frozenset(background_ids)   # --name-priority ID=background: a default for this id

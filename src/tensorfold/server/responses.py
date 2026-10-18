@@ -1,3 +1,4 @@
+# Modified for the H200 variant (2026); see docs/H200-ATTRIBUTION.md.
 """OpenAI's Responses API on both servers: each request runs as its chat completion on the server's own handler."""
 
 from __future__ import annotations
@@ -14,11 +15,8 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from tensorfold.server.errors import RequestError
-from tensorfold.server.request_body import read_body
+from tensorfold.server.request_body import LIMIT, read_body
 from tensorfold.server.responses_translate import Reply, _id, messages, translate
-
-LIMIT = 32 * 1024**2
-
 
 def route(path: str) -> str | None:
     """A ``/v1/responses`` path's response id ("" for the collection), else None."""

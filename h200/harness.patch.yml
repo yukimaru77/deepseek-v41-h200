@@ -9,6 +9,8 @@
         api: anthropic-messages
         baseURL: !!js process.env.H200_ANTHROPIC_BASE_URL || 'http://127.0.0.1:18891'
         streamIdleTimeoutMs: 600000
+        # Total base64-encoded image bytes across the request history (128 MiB).
+        maxRequestImageBytes: 134217728
         compat:
           forceAdaptiveThinking: true
           allowEmptySignature: true

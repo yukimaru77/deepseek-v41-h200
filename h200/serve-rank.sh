@@ -12,7 +12,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 rank=$1
 vision_args=()
 case "$H200_VISION" in
-  1) vision_args=(--vision) ;;
+  1) vision_args=(--vision --vision-max-images "$H200_VISION_MAX_IMAGES"
+                 --vision-image-tokens "$H200_VISION_IMAGE_TOKENS") ;;
   0) ;;
   *) printf '%s\n' 'H200_VISION must be 0 or 1.' >&2; exit 2 ;;
 esac

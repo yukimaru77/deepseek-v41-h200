@@ -15,8 +15,9 @@ Environment:
   H200_API_PORT     loopback API port (default: 18891)
   H200_MASTER_PORT  local rank rendezvous port (default: 29571)
   H200_VISION       enable image input (default: 1; 0 for text-only)
+  H200_VISION_MAX_IMAGES  images across full history (default: 0 = no count limit)
 
-Defaults: 1,048,576 tokens/request, 37,822,464 shared KV tokens, 63 slots.
+Defaults: 1,048,576 tokens/request, 36,771,840 shared KV tokens, 63 slots.
 The engine is loopback-only. Use a separately authenticated reverse proxy for
 remote access; native API-key enforcement is not relied upon by this launcher.
 HELP
@@ -48,7 +49,9 @@ if [[ $inside == 0 ]]; then
       TF_DS_ENGRAM_MMAP TF_DS_ENGRAM_PREFAULT TF_DS_PREFILL_CHUNK TF_DS_WARM_LENGTHS \
       TF_DS_REPLAY TF_DS_CHUNK_LOG TF_DS_POOL_TOKENS TF_DS_DECODE_ROWS TF_DS_PARALLEL_DEPTH \
       TF_DS_KEEP_ENTRIES TF_DS_KEEP_MARKS TF_DS_SNAPSHOT_CPU TF_DS_WARM_ROWS \
-      TF_DS_CAPACITY_CHECK TF_DS_ROUND_GRAPH_LIMIT TF_DS_CAPACITY_GRAPH_STRESS TF_DS_VISION_WARM; do
+      TF_DS_CAPACITY_CHECK TF_DS_ROUND_GRAPH_LIMIT TF_DS_CAPACITY_GRAPH_STRESS TF_DS_VISION_WARM \
+      H200_VISION_MAX_IMAGES H200_VISION_IMAGE_TOKENS TF_VISION_MAX_TOTAL_ENCODED_BYTES \
+      TF_VISION_MAX_TOTAL_PIXELS TF_REQUEST_BODY_LIMIT_BYTES; do
     if [[ -n ${!name:-} ]]; then args+=(--env "$name"); fi
   done
   exec docker "${args[@]}" "$image"

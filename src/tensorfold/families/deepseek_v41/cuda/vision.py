@@ -298,6 +298,8 @@ class DsVision:
 
     def __init__(self, cfg: VisionConfig, *, allow_urls: bool = False, max_images: int = 8,
                  max_bytes: int = 20 << 20):
+        if type(max_images) is not int or max_images < 0:
+            raise ValueError("max_images must be a nonnegative integer (0: no image-count limit)")
         self.cfg, self.allow_urls, self.max_images, self.max_bytes = cfg, allow_urls, max_images, max_bytes
         self.videos = False
         self.tokenizer = None
@@ -389,7 +391,7 @@ class DsVision:
                 if kind in ("image_url", "image"):
                     if role not in ("user", "tool"):
                         raise ValueError("images are accepted only in user messages and tool results")
-                    if len(pictures) >= self.max_images:
+                    if self.max_images and len(pictures) >= self.max_images:
                         raise ValueError(f"a request may carry at most {self.max_images} images")
                     url = part.get("image_url")
                     url = url.get("url") if isinstance(url, dict) else url

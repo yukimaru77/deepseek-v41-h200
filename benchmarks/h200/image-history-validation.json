@@ -1,0 +1,73 @@
+{
+  "date": "2026-10-18 JST",
+  "model": "DeepSeek-V4.1-Flash-1017-H200",
+  "scope": "Functional image-history validation, not a diverse-image quality or repeated performance benchmark. One private screenshot was repeated in 65 separate tool results. Images, response texts, deployment addresses and credentials are excluded.",
+  "configuration": {
+    "vision_max_images": 0,
+    "zero_means": "no fixed image-count limit",
+    "vision_image_tokens": 1048576,
+    "context_tokens": 1048576,
+    "shared_kv_tokens": 36771840,
+    "full_window_extents_arithmetic": 35,
+    "parallel_slots": 63,
+    "max_total_image_file_bytes": 134217728,
+    "max_total_pixels": 134217728,
+    "max_http_body_bytes": 201326592,
+    "harness_max_base64_image_bytes": 134217728
+  },
+  "cpu_validation": {
+    "image_and_protocol_suite_passed": 279,
+    "subsequent_image_sharing_and_capacity_suite_passed": 46,
+    "subsequent_subtests_passed": 19,
+    "suites_overlap": true
+  },
+  "loopback_anthropic_messages": {
+    "image_occurrences": 65,
+    "distinct_images": 1,
+    "image_width": 1440,
+    "image_height": 900,
+    "image_tokens_each": 794,
+    "request_bytes": 151108217,
+    "image_file_bytes_total": 113314760,
+    "http_status": 200,
+    "client_total_seconds": 28.54,
+    "input_tokens": 55097,
+    "output_tokens": 46,
+    "cached_tokens": 0,
+    "stop_reason": "end_turn",
+    "server_prefill_seconds": 9.3164,
+    "description_review_against_input": "passed",
+    "model_already_loaded_and_warmed": true
+  },
+  "authenticated_relay_anthropic_messages_cached_repeat": {
+    "image_occurrences": 65,
+    "request_bytes": 151108217,
+    "http_status": 200,
+    "client_total_seconds": 11.171,
+    "uncached_input_tokens": 1849,
+    "cached_input_tokens": 53248,
+    "total_input_tokens": 55097,
+    "output_tokens": 46,
+    "stop_reason": "end_turn",
+    "response_matches_loopback": true,
+    "harness_client_not_involved_in_this_api_probe": true
+  },
+  "capacity_preflight": {
+    "both_ranks_passed": true,
+    "rank0_free_after_checks_bytes": 2721579008,
+    "rank1_free_after_checks_bytes": 3791126528,
+    "rank0_free_with_extra_1gib_workspace_bytes": 1645740032,
+    "rank1_free_with_extra_1gib_workspace_bytes": 2715287552
+  },
+  "prior_failures_and_fixes": [
+    "Anthropic retained a separate 32 MiB body constant; all protocol routes now use the configured shared limit.",
+    "The 36-extent pool exhausted GPU memory on large image history. Image row sharing and assembly now avoid full duplicate tensors, and the deployed pool reserves one fewer full-window extent for image workspace.",
+    "The existing deployment launcher now detaches server processes and writes logs within the container."
+  ],
+  "limits": {
+    "full_1m_visual_context_tested": false,
+    "35_full_window_requests_tested_concurrently": false,
+    "original_text_speed_benchmarks_repeated": false,
+    "image_count_is_unbounded_but_bytes_pixels_time_context_and_memory_are_finite": true
+  }
+}

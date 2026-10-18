@@ -1,3 +1,4 @@
+# Modified for the H200 variant (2026); see docs/H200-ATTRIBUTION.md.
 """CPU image inputs canonicalized to immutable, oriented RGB pixels."""
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ _MEDIA = {"image", "images", "image_url", "input_image", "audio", "input_audio",
 
 @dataclass(frozen=True, slots=True)
 class ImageLimits:
-    max_images: int = 4
+    max_images: int = 4                  # 0: no count limit; byte, pixel, time and token budgets still apply
     max_encoded_bytes: int = 10 * 1024 * 1024
     max_total_encoded_bytes: int = 20 * 1024 * 1024
     max_dimension: int = 8192
@@ -39,8 +40,9 @@ class ImageLimits:
         for name in self.__dataclass_fields__:
             value = getattr(self, name)
             if (not isinstance(value, (int, float)) or isinstance(value, bool)
-                    or not math.isfinite(value) or value < 0 or (name != "max_redirects" and value == 0)):
-                raise ValueError(f"{name} must be finite and positive, except zero redirects")
+                    or not math.isfinite(value) or value < 0
+                    or (name not in {"max_redirects", "max_images"} and value == 0)):
+                raise ValueError(f"{name} must be finite and positive, except zero redirects or an unlimited image count")
             if name not in {"timeout_seconds", "total_timeout_seconds"} and not isinstance(value, int):
                 raise ValueError(f"{name} must be an integer")
 
@@ -168,7 +170,7 @@ def split_images(messages: list[dict[str, Any]], *, limits: ImageLimits = DEFAUL
                     raise ImageInputError("image_url parts are supported only in user and tool messages")
                 if any(part.get(key) for key in _MEDIA - {"image_url"}):
                     raise ImageInputError("image_url parts cannot contain other media")
-                if sum(isinstance(s, ImageSource) for s in sources) >= limits.max_images:
+                if limits.max_images and sum(isinstance(s, ImageSource) for s in sources) >= limits.max_images:
                     raise _count_error(limits)
                 source = _source(part.get("image_url"), limits, allow_urls)
                 sources.append(source)
@@ -237,7 +239,9 @@ def _decode(data: bytes, detail: str, limits: ImageLimits, remaining_pixels: int
 def load_images(sources: list[ImageSource], *, limits: ImageLimits = DEFAULT_LIMITS, allow_urls: bool = False
                 ) -> list[ImageInput]:
     """Bound encoded bytes and decoded pixels across all images in one request."""
-    if not isinstance(sources, (list, tuple)) or len(sources) > limits.max_images:
+    if not isinstance(sources, (list, tuple)):
+        raise ImageInputError("image sources must be a list or tuple")
+    if limits.max_images and len(sources) > limits.max_images:
         raise _count_error(limits)
     total_bytes, total_pixels = 0, 0
     deadline = time.monotonic() + limits.total_timeout_seconds
