@@ -1,5 +1,6 @@
 // EXL3 routed experts, any codebook and a width per expert: fixed-order splits, slots and butterflies, no atomics; 4-bit mcg matches GLM's kernel bit for bit.
 
+#include <cstdlib>
 #include <cuda_fp16.h>
 #include <cuda_bf16.h>
 #include <ATen/ATen.h>
@@ -406,6 +407,9 @@ __global__ void __launch_bounds__(PREP_THREADS) decode_prep_kernel(
     const float* __restrict__ wts, const float* __restrict__ y, const float* __restrict__ add, float* __restrict__ out,
     int D, int store_y, int* __restrict__ epoch) {
     const int n = R * slots;
+    // experiment 13 (TF_EXL3_PREP_PDL): launched as a programmatic dependent of the routing, this grid waits for it
+    // before any load or store (returns at once otherwise), then lets gate/up launch
+    asm volatile("griddepcontrol.wait;\n" ::: "memory");
     asm volatile("griddepcontrol.launch_dependents;\n" ::: "memory");   // gate/up (it waits for this grid's end)
     if (blockIdx.x == 0 && threadIdx.x == 0 && epoch != nullptr) epoch[0] += 1;     // this launch's number
     if (blockIdx.x == 0) {
@@ -872,11 +876,22 @@ void exl3x_decode_prep_cuda(const at::Tensor& x, int64_t x_stride, const at::Ten
     const float* yp = has_wts ? y.data_ptr<float>() : nullptr;
     const float* ad = has_add ? add.data_ptr<float>() : nullptr;
     float* op = has_wts ? out.data_ptr<float>() : nullptr;
+    static const int prep_pdl = [] { const char* e = std::getenv("TF_EXL3_PREP_PDL"); return e && *e ? std::atoi(e) : 0; }();
+    cudaLaunchConfig_t lc = {};
+    lc.gridDim = dim3(blocks);
+    lc.blockDim = dim3(PREP_THREADS);
+    lc.dynamicSmemBytes = smem;
+    lc.stream = stream;
+    cudaLaunchAttribute la[1];
+    la[0].id = cudaLaunchAttributeProgrammaticStreamSerialization;
+    la[0].val.programmaticStreamSerializationAllowed = 1;
+    lc.attrs = la;
+    lc.numAttrs = prep_pdl ? 1 : 0;
 #define TF_PREP(T_)                                                                                             \
-    decode_prep_kernel<T_><<<blocks, PREP_THREADS, smem, stream>>>(                                             \
+    C10_CUDA_CHECK(cudaLaunchKernelEx(&lc, decode_prep_kernel<T_>,                                              \
         reinterpret_cast<const T_*>(x.data_ptr()), (int)x_stride, pick.data_ptr<int>(), s0, s1, o0, o1, (int)K,  \
         (int)slots, (int)E, (int)rows, uids.data_ptr<int>(), ucount.data_ptr<int>(), members.data_ptr<int>(),    \
-        (int)members.size(1), w, yp, ad, op, D, (int)store_y, has_epoch ? epoch.data_ptr<int>() : nullptr)
+        (int)members.size(1), w, yp, ad, op, D, (int)store_y, has_epoch ? epoch.data_ptr<int>() : nullptr))
     if (x.scalar_type() == at::kBFloat16) TF_PREP(__nv_bfloat16);
     else TF_PREP(half);
 #undef TF_PREP

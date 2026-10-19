@@ -10,8 +10,11 @@ The following files were modified or added relative to the pinned Python base. P
 
 | File | Change |
 | --- | --- |
-| `cuda/exl3/experts.py` | H200 expert dispatch and extension configuration. |
-| `cuda/exl3/experts_grouped.cuh` | Explicit multiplication rounding in fused gate/up arithmetic, checked against the existing expert paths. |
+| `cuda/exl3/experts.py` | H200 expert dispatch and extension configuration; separate round-02 build identity. |
+| `cuda/exl3/experts.cu` | Programmatically dependent decode preparation, waiting before input access. |
+| `cuda/exl3/experts_grouped.cuh` | Explicit multiplication rounding in fused gate/up arithmetic; round-02 Tensor Core operand layout for small windows. |
+| `cuda/exl3/linear.py`, `cuda/exl3/linear_grouped.cu` | H200 grouped-linear column splits, asynchronous load ring, small-window Tensor Core operand layout and build identity. |
+| `cuda/p2p.py`, `cuda/p2p_gather.cu` | Same-host CUDA IPC small-payload all-gather with ordered ring slots and watchdog abort. |
 | `cuda/chat_template.py` | DeepSeek V4.1-1017 fallback chat template using the official encoder. |
 | `cuda/http.py` | Query-aware models routing for Messages clients. The Messages protocol implementation itself is inherited. |
 | `cuda/server.py` | Connect the DeepSeek image frontend to the server tokenizer and bounded image loader; allow explicit deployment overrides of aggregate image budgets. |
@@ -23,9 +26,9 @@ The following files were modified or added relative to the pinned Python base. P
 | `families/deepseek_v41/cuda/app.py` | Route 1017 images through the shared preparation path instead of injecting raw placeholder text. |
 | `families/deepseek_v41/cuda/vision.py` | Adapt oriented RGB inputs to the inherited vision tower and preserve the official encoder's tool-result image order. |
 | `families/deepseek_v41/cuda/engram_io.cpp` | Read-only host page-cache mapping and Engram row gathering. |
-| `families/deepseek_v41/cuda/model.py` | H200 model/Engram integration. |
-| `families/deepseek_v41/cuda/multi.py` | Shared KV capacity, admission, warmup, bounded snapshots and optional CPU snapshot storage; assemble image embeddings without duplicating the full tensor. |
-| `families/deepseek_v41/cuda/rounds.py` | H200 decode row/capacity support. |
+| `families/deepseek_v41/cuda/model.py` | H200 model/Engram integration and optional P2P/NCCL hybrid dispatch. |
+| `families/deepseek_v41/cuda/multi.py` | Shared KV capacity, admission, warmup, bounded snapshots and optional CPU snapshot storage; assemble image embeddings without duplicating the full tensor; reject aborted-step output before token commitment. |
+| `families/deepseek_v41/cuda/rounds.py` | H200 decode row/capacity support and host scheduling of Engram work. |
 | `families/deepseek_v41/cuda/capacity_check.py` | Capacity and numerical preflight checks. |
 | `families/deepseek_v41/vendor/__init__.py` | Package for the official encoder. |
 | `families/deepseek_v41/vendor/encoding.py` | Unmodified official DeepSeek V4.1-1017 encoder; see below. |

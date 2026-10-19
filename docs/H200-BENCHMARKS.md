@@ -1,5 +1,7 @@
 # H200 measurements and their limits
 
+For the 2026-10-19 optimization A/B (285.8 → 338.1 tok/s on the fixed code suite), see [H200-OPTIMIZATION.md](H200-OPTIMIZATION.md) and the [per-request extracts](../benchmarks/h200/optimization-round02.json). The sections below retain the original publication measurements and conditions.
+
 The **DeepSeek-V4.1-Flash-1017 EXL3 2.9bpw** deployment produced **144–294 output tokens/s** on three short-input, single-stream workloads with speculative decoding. It also passed a 63-stream isolation test and two near-1M-token input tests. These are different experiments; their rates and capacity claims should not be combined.
 
 The measurements below were recorded on 2026-10-17 UTC (2026-10-18 JST) with two NVIDIA H200 NVL GPUs, tensor parallelism 2, PyTorch 2.11.0+cu130 and CUDA 13.0. The host had an AMD EPYC 9115, 32 logical CPU threads and approximately 1.1 TiB RAM. See [runtime instructions](../h200/README.md) and [pinned assets](../h200/pins.json).

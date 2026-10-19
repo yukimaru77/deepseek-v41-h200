@@ -98,6 +98,19 @@ class Comm:
                     print("[tensorfold] decode gathers over RDMA writes", flush=True)
             except Exception as exc:          # noqa: BLE001  (every rank sees the same refusal)
                 print(f"[tensorfold] gathers stay on NCCL: {exc}", flush=True)
+        # TF_DS_P2P=1 (experiment 12, one host): fp32 payloads up to TF_DS_P2P_KB (default 512) a rank over the one-shot
+        # CUDA peer-write gather (tensorfold.cuda.p2p) instead of NCCL's ring; the same bytes, so no output changes
+        elif world > 1 and os.environ.get("TF_DS_P2P", "0") == "1":
+            from tensorfold.cuda.p2p import P2pGather
+            from tensorfold.cuda.rdma import Hybrid
+
+            p2p_bytes = int(float(os.environ.get("TF_DS_P2P_KB") or 512) * 1024) // 64 * 64
+            try:
+                self.nccl = Hybrid(nccl, P2pGather(nccl.store, nccl.rank, world, max_bytes=p2p_bytes))
+                if nccl.rank == 0:
+                    print(f"[tensorfold] decode gathers up to {p2p_bytes} bytes over CUDA peer writes", flush=True)
+            except Exception as exc:          # noqa: BLE001  (every rank sees the same refusal)
+                print(f"[tensorfold] gathers stay on NCCL: {exc}", flush=True)
 
     def gather(self, x: torch.Tensor) -> torch.Tensor:
         """[world, *x.shape] of every rank's x."""

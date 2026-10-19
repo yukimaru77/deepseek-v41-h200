@@ -16,6 +16,7 @@ Environment:
   H200_MASTER_PORT  local rank rendezvous port (default: 29571)
   H200_VISION       enable image input (default: 1; 0 for text-only)
   H200_VISION_MAX_IMAGES  images across full history (default: 0 = no count limit)
+  H200_KERNEL_PROFILE  baseline (default) or round02 (measured H200 optimization)
 
 Defaults: 1,048,576 tokens/request, 36,771,840 shared KV tokens, 63 slots.
 The engine is loopback-only. Use a separately authenticated reverse proxy for
@@ -44,7 +45,7 @@ if [[ $inside == 0 ]]; then
   args=(run --rm --init --gpus "\"device=$gpu_ids\"" --ipc=host --network=host
         --ulimit memlock=-1 --volume "$data_dir:/data" --env DATA_DIR=/data)
   # Forward only documented tuning settings, never the host's complete environment.
-  for name in H200_CONTEXT H200_PARALLEL H200_MTP_DRAFTS H200_VISION H200_API_PORT H200_MASTER_PORT H200_MODEL_NAME \
+  for name in H200_CONTEXT H200_PARALLEL H200_MTP_DRAFTS H200_VISION H200_API_PORT H200_MASTER_PORT H200_MODEL_NAME H200_KERNEL_PROFILE \
       TF_EXL3_DECODE OMP_NUM_THREADS MKL_NUM_THREADS MAX_JOBS TF_DS_RANK_CACHE_READERS \
       TF_DS_ENGRAM_MMAP TF_DS_ENGRAM_PREFAULT TF_DS_PREFILL_CHUNK TF_DS_WARM_LENGTHS \
       TF_DS_REPLAY TF_DS_CHUNK_LOG TF_DS_POOL_TOKENS TF_DS_DECODE_ROWS TF_DS_PARALLEL_DEPTH \

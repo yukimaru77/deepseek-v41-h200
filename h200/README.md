@@ -43,6 +43,14 @@ DATA_DIR=/srv/deepseek-h200 H200_GPU_IDS=2,3 \
 
 Both ranks use the same revisions, cache paths and settings. The container exposes only the two selected GPUs; the processes address them as local devices 0 and 1. The API binds to `127.0.0.1`. Port conflicts are not resolved by killing another process.
 
+The tested round-02 optimization is opt-in, preserving the existing default profile:
+
+```bash
+DATA_DIR=/srv/deepseek-h200 H200_KERNEL_PROFILE=round02 bash h200/run.sh
+```
+
+This selects the reviewed `cand-r3` settings in [round02.env.sh](round02.env.sh): expert/grouped-linear Tensor Core operand layout, asynchronous loads, small same-host P2P gathers, and host scheduling. It requires peer access between the two H200 GPUs. Restart both ranks when changing the profile. Use `H200_KERNEL_PROFILE=baseline` for the default paths; an exact old-binary comparison requires the earlier source/image. [Measured results and A/H reproduction](../docs/H200-OPTIMIZATION.md).
+
 The default configuration retains the recorded 1017 per-request context and active-slot limits, enables the checkpoint's image tower, and reduces the shared pool by one full-window extent to provide image workspace:
 
 | Setting | Value |
@@ -93,4 +101,4 @@ OpenAI and Anthropic client examples: [CLIENTS.md](CLIENTS.md). The server's inh
 
 ## Validation scope
 
-The H200 kernels, model, capacity and client behavior were measured on the original running deployment; the checked-in source implements that deployment, with the Messages model-list query fix included. The portable packaging is checked separately: see [H200-VALIDATION.md](../docs/H200-VALIDATION.md). Building this package does not itself reload the running model or repeat the multi-minute 1M workload.
+The original results describe the running deployment; the round-02 results describe the separately validated candidate. The checked-in source includes that candidate, while `H200_KERNEL_PROFILE=round02` selects its optimized paths. The portable packaging is checked separately: see [H200-VALIDATION.md](../docs/H200-VALIDATION.md). Building this package does not itself reload the running model or repeat the multi-minute 1M workload.

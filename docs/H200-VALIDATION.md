@@ -1,5 +1,24 @@
 # Publication validation
 
+## Round-02 integration (2026-10-19)
+
+The selected `cand-r3` kernels, P2P abort fix and host scheduling were applied onto the published `a74d102` tree. All 485 runtime source files match the frozen selected source after omitting only eight pre-existing first-line attribution comments; those comments remain in this repository. The source manifest, individual optimized-file hashes and corrected post-start binary inventory are in [optimization-round02-provenance.json](../benchmarks/h200/optimization-round02-provenance.json). No cand-r4 cleanup or later candidate is mixed into this snapshot.
+
+The final experiment's GPU/API evidence is summarized in [H200-OPTIMIZATION.md](H200-OPTIMIZATION.md). Integration itself ran no GPU workload and did not change the live service. The optional `H200_KERNEL_PROFILE=round02` selects its measured settings; model revisions, API/vision support, 1M context and the existing 35-extent shared pool are retained.
+
+Local integration checks: **20 passed, 1 skipped, 19 subtests passed** (Python CPU suite). The skipped CUDA-thinking-control module requires PyTorch, absent in this local test environment. An initial run lacked Jinja2; installing that declared dependency resolved its six setup errors. Command:
+
+```bash
+uv run --no-project --with pytest --with jinja2 python -m pytest -q -p no:cacheprovider \
+  tests/test_packaging.py tests/test_dsv41_capacity_limits.py \
+  tests/test_dsv41_snapshot_budget.py tests/test_dsv41_1017_chat.py \
+  tests/test_h200_model_listing.py tests/test_cuda_thinking_controls.py
+```
+
+Shell syntax, profile selection/forwarding, benchmark help and Python syntax checks also pass. The benchmark's A/H prompts and measurement functions are unchanged from the experiment harness (only descriptive text was updated). The public result extract was recomputed from all eight raw measurement files, checking budgets, finishes, foreign-request counts, generated-text hashes and cross-variant parity. The portable package was not rebuilt or cold-started on GPUs in this integration pass. Earlier publication/vision checks below are historical, not new checks of the optimized binaries.
+
+## Initial publication
+
 Validation date: 2026-10-18 JST. The original running two-H200 model was left running throughout initial publication. The subsequent image-input fix did restart the service; its validation is recorded separately below.
 
 ## Source and protocol checks

@@ -1,0 +1,93 @@
+{
+  "selected_candidate": "cand-r3",
+  "frozen_source_manifest_sha256": "a818766b18751c4bb3882d98aca77032e19927fc2a0789714f8528f9c6c953fe",
+  "source_comparison": "All 485 runtime source files match the frozen candidate after omitting only the eight pre-existing first-line H200 attribution comments listed below. Package metadata and bytecode excluded.",
+  "retained_attribution_comments": [
+    "tensorfold/cuda/health.py",
+    "tensorfold/cuda/http.py",
+    "tensorfold/cuda/chat_template.py",
+    "tensorfold/cuda/exl3/experts_grouped.cuh",
+    "tensorfold/cuda/exl3/experts.py",
+    "tensorfold/families/deepseek_v41/cuda/rounds.py",
+    "tensorfold/families/deepseek_v41/cuda/engram_io.cpp",
+    "tensorfold/families/deepseek_v41/cuda/model.py"
+  ],
+  "optimized_files": [
+    {
+      "path": "src/tensorfold/cuda/p2p.py",
+      "frozen_sha256": "45f940f4877803005e71424d628ff28c4c982358165676318517567e0ffc0d2a",
+      "published_sha256": "45f940f4877803005e71424d628ff28c4c982358165676318517567e0ffc0d2a",
+      "difference": "none"
+    },
+    {
+      "path": "src/tensorfold/cuda/p2p_gather.cu",
+      "frozen_sha256": "0d799013b3c550abd88d3b5de93056a6d4e07aa9520960bd71d6d3631976a5c9",
+      "published_sha256": "0d799013b3c550abd88d3b5de93056a6d4e07aa9520960bd71d6d3631976a5c9",
+      "difference": "none"
+    },
+    {
+      "path": "src/tensorfold/cuda/exl3/linear.py",
+      "frozen_sha256": "b010de63d0b68613d592f345b1eb25da7fb48c8f150fc5d97e1587983ee03eb0",
+      "published_sha256": "b010de63d0b68613d592f345b1eb25da7fb48c8f150fc5d97e1587983ee03eb0",
+      "difference": "none"
+    },
+    {
+      "path": "src/tensorfold/cuda/exl3/linear_grouped.cu",
+      "frozen_sha256": "085132f6520df1d01f4c24ba40de3121411d0b5ae1520714bbc9a533f5751ef7",
+      "published_sha256": "085132f6520df1d01f4c24ba40de3121411d0b5ae1520714bbc9a533f5751ef7",
+      "difference": "none"
+    },
+    {
+      "path": "src/tensorfold/cuda/exl3/experts_grouped.cuh",
+      "frozen_sha256": "41d75b59f89fafcb867c3e61ac902fe9920916bef7c19a8f128bd3decd8c10cf",
+      "published_sha256": "5645c8e8a9f3b041897c224182441683d0700c415a920e348a344ebc203e6e42",
+      "difference": "first-line H200 attribution comment only"
+    },
+    {
+      "path": "src/tensorfold/cuda/exl3/experts.cu",
+      "frozen_sha256": "3a1afca4bc38c9b92980bac4041dd0492152d797e5108fab7d28f11ab80f4b87",
+      "published_sha256": "3a1afca4bc38c9b92980bac4041dd0492152d797e5108fab7d28f11ab80f4b87",
+      "difference": "none"
+    },
+    {
+      "path": "src/tensorfold/cuda/exl3/experts.py",
+      "frozen_sha256": "c2356a495142f9262b34abe91082443d479373138f700cfdcc973cabcb70e409",
+      "published_sha256": "a7d250c64d9e529040c8df1d57a7735ee0541f8411e3e2ad7a4354ed34d1abb9",
+      "difference": "first-line H200 attribution comment only"
+    },
+    {
+      "path": "src/tensorfold/families/deepseek_v41/cuda/rounds.py",
+      "frozen_sha256": "621fe6e5116c0965a2dfe85d70353f961c89739c295888090f37bb02d2b76975",
+      "published_sha256": "981984068975c64e82b5b7d55b7c974c2c285ba20c02e3f3ea526a3f4d583fd0",
+      "difference": "first-line H200 attribution comment only"
+    },
+    {
+      "path": "src/tensorfold/families/deepseek_v41/cuda/multi.py",
+      "frozen_sha256": "6b8eb3922b36281bfb282fb89d6f1edad77ff9f0bb2a9674711d91388b2fa062",
+      "published_sha256": "6b8eb3922b36281bfb282fb89d6f1edad77ff9f0bb2a9674711d91388b2fa062",
+      "difference": "none"
+    },
+    {
+      "path": "src/tensorfold/families/deepseek_v41/cuda/model.py",
+      "frozen_sha256": "0cb796ae83ef9d14dbf80858826ce0dc419756aedbd8f38b9f35e90ec7fa72a1",
+      "published_sha256": "d06d88454f247dcae1ac642e7d56045cf43bdbdb6925ac2fe1a291c5b5f48300",
+      "difference": "first-line H200 attribution comment only"
+    }
+  ],
+  "measured_binaries": {
+    "note": "Post-start observed hashes from the selected CUDA 13.0.88 H200 build. Rebuilding under another path/toolchain need not produce these binary hashes.",
+    "tensorfold_exl3_experts_e13x_v4.so": "85a3567c9cb260b20497446a5801aaa283b642425f4d3adf186e268c1d2add1d",
+    "tensorfold_exl3_linear_e13g_v4.so": "a7833cca04278680c6a557bd172e972b9d3dc67b90da9fa6b234db6f349c0f8a",
+    "tensorfold_p2p_gather_v2.so": "3c12657dd735fb2e149fb53b401f546afe1bf5310b23930df36d566e6cb495e3",
+    "tf_ds_engram_io_h200_mmap_v1.so": "dfbf250f7335f746a19568fb0dc2c27ff3d06cd83f45e086588eba2be6315c86"
+  },
+  "inventory_correction": {
+    "pre_start_inventory_utc": "2026-10-19T07:08:58Z",
+    "correction_observed_utc_date": "2026-10-19",
+    "explanation": "The pre-start inventory predates lazy rebuilding of P2P and Engram IO. They rebuilt at 07:22:01 and 07:21:24 UTC, before the first r3 measurement at 07:23:07 UTC. Expert/glinear hashes did not change. Final A/B and functional validation used the post-start builds.",
+    "historical_pre_start_hashes": {
+      "tensorfold_p2p_gather_v2.so": "61e2292e279eff6709eedb81187395225709576648730a1b18fd0860209ab279",
+      "tf_ds_engram_io_h200_mmap_v1.so": "15498b62631d565a787eee8104993ef9a4685a25956c9467a6f77ee2a911b8d8"
+    }
+  }
+}

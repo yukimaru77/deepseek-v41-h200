@@ -94,6 +94,11 @@ EAGER_ABSORB = os.environ.get("TF_DS_EAGER_ABSORB", "1") == "1"
 # 200 rounds (the DSpark acceptance report)
 CONF_LOG = os.environ.get("TF_DS_CONF_LOG", "0") == "1"
 STEP_TIMEOUT = float(os.environ.get("TF_DS_STEP_TIMEOUT") or 900.0)
+# Experiment 13, tests only: TF_TEST_STALL="<rank>:<round|fill>:<n>:<seconds>" stalls that rank's host thread for that
+# long just before the n-th (1-based) round's target forward or the n-th fill chunk, so its peer waits inside the
+# step's gathers (fault injection for the abort path; never set when serving)
+_STALL = (os.environ.get("TF_TEST_STALL") or "").split(":")
+TEST_STALL = (int(_STALL[0]), _STALL[1], int(_STALL[2]), float(_STALL[3])) if len(_STALL) == 4 else None
 # TF_DS_KEEP=1 (default): finished prompts stay in the window for later prompts that start the same (``Kept``), at
 # most KEEP_ENTRIES of them, each with its rings at KEEP_MARKS chunk boundaries at most (the doubling ones from the first
 # chunk, the prompt's last two, the ones it continued from)
@@ -504,6 +509,25 @@ class MultiDecoder:
         if self.watch is not None and self.watch.broken is not None:
             raise RuntimeError(f"this lane lost a rank ({self.watch.broken}); restart it on every rank")
 
+    def _commit_ok(self) -> None:
+        """Before a step emits or commits anything it computed: the lane must still be whole. A watchdog abort releases
+        the step's collectives with undefined outputs (the P2P and RDMA waits return on the abort word, NCCL is aborted);
+        the watchdog sets ``broken`` before it raises that word, so once the step's device-to-host read (sampling) has
+        returned, a released collective is always visible here, and the step fails instead of emitting its tokens.
+        (Experiment 13; no device synchronization is added: the check follows the read the step already makes.)"""
+
+        if self.watch is not None and self.watch.broken is not None:
+            raise RuntimeError(f"this lane lost a rank during the step ({self.watch.broken}); its output is discarded")
+
+    def _test_stall(self, op: str) -> None:
+        if TEST_STALL is None or TEST_STALL[0] != self.e.rank or TEST_STALL[1] != op:
+            return
+        n = self.__dict__.setdefault("_stall_n", {}).get(op, 0) + 1
+        self._stall_n[op] = n
+        if n == TEST_STALL[2]:
+            print(f"[tensorfold] TEST: rank {self.e.rank} stalls {TEST_STALL[3]:.0f} s before {op} {n}", flush=True)
+            time.sleep(TEST_STALL[3])
+
     def _agree(self, what: str, plan: list) -> None:
         """One small all-gather checks the step on every rank before any of its model collectives."""
 
@@ -853,6 +877,7 @@ class MultiDecoder:
         self._step(True)
         try:
             self._agree("fill", [self._shape(), s.sid])
+            self._test_stall("fill")
             t0 = time.perf_counter()
             try:
                 s.filled = next(s.steps)
@@ -865,9 +890,12 @@ class MultiDecoder:
             self.round_end = None                      # (ROUND_STATS: a fill is not host time between rounds)
             if last is None:
                 return []
+            first = e._sample(last, [len(s.prompt)], s.sampling)[0]
+            # the first token: not from a step a lost rank released. Checked while the stream is still in
+            # self.filling, so drop() still finds it and its request gets the error (experiment 13 fault test)
+            self._commit_ok()
             self.filling.remove(s)
             s.steps = None
-            first = e._sample(last, [len(s.prompt)], s.sampling)[0]
             s.started = time.perf_counter()
             s.pending = first
             self.streams[s.sid] = s
@@ -1001,7 +1029,7 @@ class MultiDecoder:
 
             want = {s.sid: (min(k, s.count - len(s.out)) if s.draft else 0) for s in live}
             drafting = [s for s in live if want[s.sid] > 0]
-            if drafting:                                 # the rows known before the drafts: their Engram rows now
+            if drafting and self.runner.touching():       # the rows known before the drafts: their Engram rows now
                 self.runner.engram_touch([[*s.st.sc.host[max(0, s.st.sc.length - 8):s.st.sc.length].tolist(),
                                            s.pending] for s in live])
             proposed, confs = {}, {}
@@ -1034,6 +1062,7 @@ class MultiDecoder:
                 windows.append((s.st.index, s.base, s.size, P, window, sc.host.view()))
                 kept.append((s, P, drafts))
             _ht("drafts back + plan")
+            self._test_stall("round")
             logits, taps = self.runner.forward(windows)
             _ht("forward launched")
             absorb_done = None
@@ -1052,6 +1081,7 @@ class MultiDecoder:
             for (s, P, drafts), (_, _, _, _, window, _) in zip(kept, windows):
                 n = len(window)
                 target = e._sample(logits[r0:r0 + n], [P + 1 + i for i in range(n)], s.sampling)
+                self._commit_ok()                        # after the read that ends the step's GPU work, before take
                 a = 0
                 while a < len(drafts) and drafts[a] == target[a]:
                     a += 1

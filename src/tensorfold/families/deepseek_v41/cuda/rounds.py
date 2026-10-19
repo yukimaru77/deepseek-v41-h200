@@ -34,6 +34,12 @@ ENGRAM_TOUCH = os.environ.get("TF_DS_ENGRAM_TOUCH", "1") == "1"
 # non-blocking copy, not five synchronous ones (each waited for the stream: GPU idle between the drafts and the forward);
 # also the drafter's inputs (dspark.py; the absorb's indices stay synchronous: pinned was slower there). 0: as before
 ONE_COPY = os.environ.get("TF_DS_ONE_COPY", "1") == "1"
+# experiment 13, TF_DS_HOST13=1 (default 0): host work off the round's critical path, no GPU op or value changed --
+# (A) with resident (mmap) Engram tables and no Engram layer in the first stretch, a round's Engram hashes and reads
+# run right after the first stretch is enqueued (the same hashes of the same host ids, read before the stretch that
+# takes them) instead of before its input copy; (B) engram_touch is skipped where Engram.touch does nothing (resident
+# tables), tails and hashes included
+HOST13 = os.environ.get("TF_DS_HOST13", "0") == "1"
 # TF_DS_ROUND_SHARED_OUT=1 (default): a RoundRunner's graphs write their logits and taps into one pair of buffers the
 # runner makes before any capture ([16, vocab] fp32, [16, taps] bf16), not a pair a graph in the graph pool (64 graphs
 # at ready held ~284 MiB a rank; long contexts capture more). The same copies of the same values: a round's logits and
@@ -579,11 +585,11 @@ class RoundDecoder:
         self.end.copy_(torch.tensor(end, dtype=torch.long), non_blocking=False)
 
     def run(self, ids: list[int], pos: list[int], slots: list[int], base: list[int], end: list[int],
-            e_rows, e_start: dict | None = None) -> torch.Tensor:
+            e_rows, e_start: dict | None = None, late=None) -> torch.Tensor:
         """``e_rows``: layer -> its Engram rows on the GPU, or a callable giving them (called just before the stretch
         that starts at that layer, so the read overlaps the stretches before it). ``e_start``: layer -> a callable that
         starts that layer's read, called once the stretch before the one that needs the rows is enqueued (before the
-        first stretch for rows it needs)."""
+        first stretch for rows it needs). ``late``: called once the first stretch is enqueued (HOST13)."""
 
         def start(k: int) -> None:                       # the reads the stretch after stretch k needs
             if e_start:
@@ -609,6 +615,9 @@ class RoundDecoder:
             else:
                 self.graphs[k].replay()
             _ht(f"fwd stretch {k} launched")
+            if k == 0 and late is not None:
+                late()
+                _ht("fwd late engram")
             start(k)
             _ht(f"fwd reads after {k} submitted")
         return self.logits
@@ -637,6 +646,14 @@ class RoundRunner:
 
     def bucket(self, deepest: int) -> int:
         return bucket_for(deepest, self.pool.cap)
+
+    def touching(self) -> bool:
+        """Whether engram_touch does anything (HOST13: not with resident tables, where Engram.touch returns at once)."""
+
+        e = self.m.engram
+        if not ENGRAM_TOUCH or e is None:
+            return False
+        return not HOST13 or (e.bg is not None and not e.mtables)
 
     def engram_touch(self, tails: list[list[int]]) -> None:
         """``tails``: each stream's host ids ending with its pending token, the n-gram's tokens before it included (or
@@ -669,6 +686,10 @@ class RoundRunner:
         m = self.m
         ids, pos, slots, base, end = [], [], [], [], []
         hashes = []
+        late = None
+        e_layers = [i for i in m.cfg.engram_layers if i < len(m.w.layers)] if m.engram is not None else []
+        defer = (HOST13 and replay and ENGRAM_SPLIT and e_layers and min(e_layers) > 0 and m.engram.mtables
+                 and not m.engram.decode_aio())
         for slot, b0, size, p0, toks, host in windows:
             n = len(toks)
             ids += toks
@@ -676,12 +697,27 @@ class RoundRunner:
             slots += [slot] * n
             base += [b0] * n
             end += [b0 + size] * n
-            if m.engram is not None:
+            if m.engram is not None and not defer:
                 hashes.append(m.engram.hashes(host, p0, n))
         R = len(ids)
         b = self.bucket(max(p + 1 for p in pos))
         e_rows = e_start = None
-        if m.engram is not None and replay:
+        if defer:
+            import numpy as np
+
+            lo, hi = m.engram.cols
+            idx = {}
+
+            def late():
+                # forward()'s hashes and layer-order reads, after the first stretch (no Engram layer) is enqueued
+                hs = np.concatenate([m.engram.hashes(host, p0, len(toks)) for _, _, _, p0, toks, host in windows], 0)
+                for i in e_layers:
+                    idx[i] = hs[:, m.cfg.engram_layers.index(i), lo:hi]
+                for i in e_layers:
+                    m.engram.prefetch(i, idx[i], lane=2)
+
+            e_rows = {i: (lambda i=i: m.engram.rows(i, idx[i])) for i in e_layers}
+        elif m.engram is not None and replay:
             import numpy as np
 
             hs = np.concatenate(hashes, 0)
@@ -717,5 +753,5 @@ class RoundRunner:
                 self.captures += 1
         if not replay:
             return None, None
-        out = g.run(ids, pos, slots, base, end, e_rows, e_start)
+        out = g.run(ids, pos, slots, base, end, e_rows, e_start, late)
         return out, g.taps

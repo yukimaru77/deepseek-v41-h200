@@ -4,7 +4,21 @@ DeepSeek-V4.1-Flash-1017を **H200 NVL 2枚**で動かす、TensorFoldベース�
 
 Based on [TensorFold](https://github.com/bertholomus/TensorFold/tree/8e0966e2b09250abe2f6d9cc51edc20630e6eb1a), pinned at `8e0966e2b09250abe2f6d9cc51edc20630e6eb1a`. Includes patched source, deployment scripts, and measurements for two H200 GPUs. This is an independent derivative, not an official DeepSeek or NVIDIA release. Original documentation: [README.upstream.md](README.upstream.md).
 
-## 実測結果
+## 最適化後の実測（2026-10-19）
+
+**固定したコード5課題の中央値は285.8 → 338.1 tokens/s（+18.3%）**。同じ時間帯に元のソースと交互に測定した結果です。最速の課題は369.5 tokens/sで、400には未到達です。
+
+| 単一リクエスト・thinking off・temperature=0 | 元のソース | 最適化候補 |
+|---|---:|---:|
+| コード5課題の中央値（各1024 tokens） | 285.8 | **338.1 tokens/s** |
+| 日本語・英語の文章4課題の中央値（各1024 tokens） | 147.8 | **174.3 tokens/s** |
+| 初回公開と同じコード課題（512 tokens） | 256.2 | **302.4 tokens/s** |
+
+画像機能有効・共有KVプール36,771,840 tokens・63スロットの構成で測定しました。全288件で出力長・終了理由を確認し、各課題の生成テキストとトークン列の記録済みダイジェストが一致しています。課題は調整中にも使った固定セットで、一般的な精度保証ではありません。
+
+採用したCUDA実装と再現設定はこのリポジトリに含まれます。`H200_KERNEL_PROFILE=round02` で有効化します。これは実験サービスの測定値で、検証後の本番は元の構成へ戻しています。既定の起動プロファイルも `baseline` のままです。[変更内容・測定条件・再現手順](docs/H200-OPTIMIZATION.md) / [全試行の数値](benchmarks/h200/optimization-round02.json)
+
+## 初回公開時の実測
 
 **1017版・2.9 bpw・単一ストリーム・出力512 tokens・各3回の中央値**。2026-10-18 JST、thinking off、temperature=0、DSpark投機生成あり、warm-up後の測定です。この節は画像機能無効・共有KVプール37,822,464 tokens（36会話分）の初回計測を示します。
 
